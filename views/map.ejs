@@ -7,7 +7,14 @@
   </head>
   <body>
 
-	    <input id="pac-input" class="controls" type="text" placeholder="Enter your destination">
+  <script>
+	var xLoc = '<%- xLoc %>';
+	var xDest = '<%- xDest %>';
+	var yLoc = '<%- yLoc %>';
+	var yDest = '<%- yDest %>';
+	var updateAt = '<%- updateAt %>';
+  </script>
+	  <input id="pac-input" class="controls" type="text" placeholder="Enter your destination">
   <div id="map-canvas"></div>
 
 
@@ -15,8 +22,13 @@
 
 
   <script src="/javascripts/myscript.js"></script>
+	
+<form action="/map" method="post" id="hiddenForm">
+	<input type="hidden" id="hiddenLoc" name="hiddenLoc"  value="test">
+	<input type="hidden" id="hiddenDest" name="hiddenDest" value="test">
+</form>
 
-
+  <script src="/javascripts/updateloc.js"></script>
 
   </body>
 </html>

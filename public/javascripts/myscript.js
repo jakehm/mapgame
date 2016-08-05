@@ -11,16 +11,31 @@ var goSignal;
 var marker;
 var coordListBuffer;
 var movementOn = false;
+var test = "test";
+
+var currentTime = new Date();
+var timePassed = currentTime - updateAt;
+
+var endingLocation = new google.maps.LatLng({
+	lat: parseFloat(xDest),
+	lng: parseFloat(yDest)
+});
+
+var startingLocation = new google.maps.LatLng({
+	lat: parseFloat(xLoc),
+	lng: parseFloat(yLoc)
+});
+
+currentLocation = startingLocation;
+var destination = endingLocation;
 
 function initialize() {
+
 	directionsService = new google.maps.DirectionsService();
 
 	var mapOptions = {
 		zoom: 13,
-		center: {
-			lat: 40.771,
-			lng: -73.974
-		}
+		center: startingLocation
 	};
 	map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
 
@@ -43,7 +58,7 @@ function initialize() {
 	});
 
 
-	calculateAndDisplayRoute("penn station, new york, ny", "grand central station, new york, ny");
+	calculateAndDisplayRoute(startingLocation, endingLocation);
 
 
 
@@ -75,7 +90,6 @@ function initialize() {
 }
 
 function calculateAndDisplayRoute(origin, destination) {
-	console.log("entering calc");
 	coordList = [];
 	var routeOptions = {
 		origin: origin,
@@ -108,7 +122,6 @@ function calculateAndDisplayRoute(origin, destination) {
 
 
 function moveMarker() {
-	console.log("entering moveMarker");
 	movementOn = true;
 	goSignal = true;
 	coordList = expandCoords(0.0001);
@@ -131,7 +144,6 @@ function moveMarker() {
 }
 
 function expandCoords(speed) {
-	console.log("entering expandCoords");
 	var newCoords = [];
 	var i = 0;
 
@@ -171,13 +183,10 @@ function interp(coord1, coord2, speed) {
 
 
 function listenForSearch() {
-	console.log("entering listen");
-
 
 	//listen for eventlistenersent fired
 	var markers = [];
 	searchBox.addListener('places_changed', function() {
-		console.log("PLACES CHANGED!");
 		var places = searchBox.getPlaces();
 		if (places.length === 0) {
 			return;
@@ -220,17 +229,19 @@ function listenForSearch() {
 			inited = false;
 
 			var getResult3 = function() {
-				if (movementOn === false)
+				if (movementOn === false) {
 					calculateAndDisplayRoute(marker.getPosition(), places[0].geometry.location);
-				else
+					destination = places[0].geometry.location;
+				}
+				else {
 					setTimeout(getResult3, 100);
+				}
 			};
 			getResult3();
 
 
 			var getResult2 = function() {
 				if (inited === true && movementOn === false) {
-					console.log("getresult2 going into movemarker");
 					moveMarker();
 					//listenForSearch();
 				} else {

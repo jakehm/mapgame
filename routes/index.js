@@ -2,6 +2,7 @@ var express = require('express');
 var passport = require('passport');
 var Account = require('../models/account');
 var router = express.Router();
+var User = require('../models/user');
 
 
 router.get('/', function (req, res) {
@@ -23,6 +24,7 @@ router.post('/register', function(req, res, next) {
 				if (err) {
 					return next(err);
 				}
+
 				res.redirect('/');
 			});
 		});
@@ -58,8 +60,67 @@ router.get('/ping', function(req, res){
 });
 
 router.get('/map', function(req, res) {
-	res.render('map', {user : req.user});
+	var xDest;
+	var yDest;
+	var xLoc;
+	var yLoc;
+	var updateAt;
+	User.findOne({username : req.user.username}, function (err,user){
+		if (err) return handleError(err);
+		if (!user) {
+			var newUser = User({ username : req.user.username});
+			newUser.save(function(err) {
+				if (err) throw err;
+				console.log('User created.');
+				xDest = newUser.xDest;
+				yDest = newUser.yDest;
+				xLoc = newUser.xLoc;
+				yLoc = newUser.yLoc;
+				updateAt = newUser.updateAt;
+			});
+		} else {
+			xDest = user.xDest;
+			yDest = user.yDest;
+			xLoc = user.xLoc;
+			yLoc = user.yLoc;
+			updateAt = user.updateAt;
+		}
+
+		//now render the page with necessary params
+		res.render('map', {
+			user : req.user.username,
+			xDest : xDest,
+			yDest : yDest,
+			xLoc : xLoc,
+			yLoc : yLoc,
+			updateAt : updateAt
+		});
+	});
 });
+
+router.post('/map', function(req, res) {
+
+	var newLoc = req.body.hiddenLoc;
+	var xLoc = newLoc.split(',')[0];
+	var yLoc = newLoc.split(',')[1];
+
+	var newDest = req.body.hiddenDest;
+	var xDest = newDest.split(',')[0];
+	var yDest = newDest.split(',')[1];
+
+
+	User.findOne({username : req.user.username}, function (err,user){	
+		if (err) return handleError(err);
+		user.xLoc = xLoc;
+		user.yLoc = yLoc;
+		user.xDest = xDest;
+		user.yDest = yDest;
+		user.save(function (err) {
+			if (err) return handleError(err);
+		});
+	});
+});
+
 
 module.exports = router;
 
