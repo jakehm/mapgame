@@ -13,9 +13,10 @@ var coordListBuffer;
 var movementOn = false;
 var test = "test";
 
-var currentTime = new Date();
-var timePassed = currentTime - updateAt;
-
+var currentTime = new Date().getTime();
+var timePassed = currentTime - updatedAt;
+console.log("current time="+currentTime);
+console.log("updated at="+updatedAt);
 var endingLocation = new google.maps.LatLng({
 	lat: parseFloat(xDest),
 	lng: parseFloat(yDest)
@@ -48,7 +49,7 @@ function initialize() {
 	//initializing searchBox
 	var input = document.getElementById('pac-input');
 	searchBox = new google.maps.places.SearchBox(input);
-	
+
 	map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
 
 
@@ -103,14 +104,29 @@ function calculateAndDisplayRoute(origin, destination) {
 
 			//getting coords from inner lists      
 			var legs = response.routes[0].legs;
-
+			var totalDuration = 0;
 			for (var i = 0; i < legs.length; i++) {
+				totalDuration += legs[i].duration.value; 
 				var steps = legs[i].steps;
 				for (var j = 0; j < steps.length; j++) {
 					var path = steps[j].path;
 					for (k = 0; k < path.length; k++) {
 						coordList.push([path[k].lat(), path[k].lng()]);
 					}
+				}	
+			}
+			//predicts location while you were gone
+			if(timePassed) {
+				var fractionTraveled = timePassed / totalDuration;
+				console.log("totalDuration="+totalDuration);
+				console.log("time passed="+timePassed);
+				console.log("fraction traveled="+fractionTraveled);
+				if (fractionTraveled < 1){
+					var startIndex = fractionTraveled*coordList.length;
+					startIndex = Math.round(startIndex);
+					coordList = coordList.slice(startIndex);
+					console.log("slicing coordList");
+					timePassed = null;
 				}
 			}
 			inited = true;
@@ -137,6 +153,7 @@ function moveMarker() {
 
 			currentLocation = new google.maps.LatLng(x, y);
 			marker.setPosition(currentLocation);
+			console.log("coordlist "+i+" out of "+coordList.length);
 			i++;
 		}
 	}, 500);

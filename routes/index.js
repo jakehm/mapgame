@@ -64,7 +64,7 @@ router.get('/map', function(req, res) {
 	var yDest;
 	var xLoc;
 	var yLoc;
-	var updateAt;
+	var updatedAt;
 	User.findOne({username : req.user.username}, function (err,user){
 		if (err) return handleError(err);
 		if (!user) {
@@ -76,16 +76,17 @@ router.get('/map', function(req, res) {
 				yDest = newUser.yDest;
 				xLoc = newUser.xLoc;
 				yLoc = newUser.yLoc;
-				updateAt = newUser.updateAt;
+				updatedAt = newUser.updatedAt;
 			});
 		} else {
 			xDest = user.xDest;
 			yDest = user.yDest;
 			xLoc = user.xLoc;
 			yLoc = user.yLoc;
-			updateAt = user.updateAt;
+			updatedAt = user.updatedAt;
 		}
-
+		updatedAt = updatedAt.getTime() / 1000;
+		console.log(updatedAt);
 		//now render the page with necessary params
 		res.render('map', {
 			user : req.user.username,
@@ -93,7 +94,7 @@ router.get('/map', function(req, res) {
 			yDest : yDest,
 			xLoc : xLoc,
 			yLoc : yLoc,
-			updateAt : updateAt
+			updatedAt : updatedAt
 		});
 	});
 });
@@ -118,6 +119,7 @@ router.post('/map', function(req, res) {
 		user.save(function (err) {
 			if (err) return handleError(err);
 		});
+		console.log(user.updatedAt);
 	});
 });
 

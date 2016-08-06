@@ -14,19 +14,13 @@ var userSchema = new Schema({
 //before saving, makes date current
 userSchema.pre('save', function(next) {
 	var currentDate = new Date();
-	this.updateAt = currentDate;
+	this.updatedAt = currentDate;
 
 	if (!this.createdAt)
 		this.createdAt = currentDate;
 
 	next();
 });
-
-//Finds by username
-userSchema.statics.findByUsername = function(usernamename, cb) {
-	return this.find({ username: new RegExp(name, 'i') }, cb);
-};
-
 
 var User = mongoose.model('User', userSchema);
 
