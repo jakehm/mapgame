@@ -71,7 +71,6 @@ router.get('/map', function(req, res) {
 			var newUser = User({ username : req.user.username});
 			newUser.save(function(err) {
 				if (err) throw err;
-				console.log('User created.');
 				xDest = newUser.xDest;
 				yDest = newUser.yDest;
 				xLoc = newUser.xLoc;
@@ -86,7 +85,6 @@ router.get('/map', function(req, res) {
 			updatedAt = user.updatedAt;
 		}
 		updatedAt = updatedAt.getTime() / 1000;
-		console.log(updatedAt);
 		//now render the page with necessary params
 		res.render('map', {
 			user : req.user.username,
@@ -119,7 +117,6 @@ router.post('/map', function(req, res) {
 		user.save(function (err) {
 			if (err) return handleError(err);
 		});
-		console.log(user.updatedAt);
 	});
 });
 

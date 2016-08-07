@@ -13,10 +13,8 @@ var coordListBuffer;
 var movementOn = false;
 var test = "test";
 
-var currentTime = new Date().getTime();
+var currentTime = new Date().getTime() / 1000;
 var timePassed = currentTime - updatedAt;
-console.log("current time="+currentTime);
-console.log("updated at="+updatedAt);
 var endingLocation = new google.maps.LatLng({
 	lat: parseFloat(xDest),
 	lng: parseFloat(yDest)
@@ -95,7 +93,7 @@ function calculateAndDisplayRoute(origin, destination) {
 	var routeOptions = {
 		origin: origin,
 		destination: destination,
-		travelMode: google.maps.TravelMode.WALKING
+		travelMode: google.maps.TravelMode.DRIVING
 	};
 
 	directionsService.route(routeOptions, function(response, status) {
@@ -118,14 +116,10 @@ function calculateAndDisplayRoute(origin, destination) {
 			//predicts location while you were gone
 			if(timePassed) {
 				var fractionTraveled = timePassed / totalDuration;
-				console.log("totalDuration="+totalDuration);
-				console.log("time passed="+timePassed);
-				console.log("fraction traveled="+fractionTraveled);
 				if (fractionTraveled < 1){
 					var startIndex = fractionTraveled*coordList.length;
 					startIndex = Math.round(startIndex);
 					coordList = coordList.slice(startIndex);
-					console.log("slicing coordList");
 					timePassed = null;
 				}
 			}
@@ -153,7 +147,6 @@ function moveMarker() {
 
 			currentLocation = new google.maps.LatLng(x, y);
 			marker.setPosition(currentLocation);
-			console.log("coordlist "+i+" out of "+coordList.length);
 			i++;
 		}
 	}, 500);
