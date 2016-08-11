@@ -60,11 +60,24 @@ router.get('/ping', function(req, res){
 });
 
 router.get('/map', function(req, res) {
+	console.log(req.user);
 	var xDest;
 	var yDest;
 	var xLoc;
 	var yLoc;
 	var updatedAt;
+
+	var renderMap = function() {	
+		res.render('map', {
+			user : req.user.username,
+			xDest : xDest,
+			yDest : yDest,
+			xLoc : xLoc,
+			yLoc : yLoc,
+			updatedAt : updatedAt
+		});
+	};
+
 	User.findOne({username : req.user.username}, function (err,user){
 		if (err) return handleError(err);
 		if (!user) {
@@ -76,6 +89,7 @@ router.get('/map', function(req, res) {
 				xLoc = newUser.xLoc;
 				yLoc = newUser.yLoc;
 				updatedAt = newUser.updatedAt.getTime()/1000;
+				renderMap();
 			});
 		} else {
 			xDest = user.xDest;
@@ -83,16 +97,8 @@ router.get('/map', function(req, res) {
 			xLoc = user.xLoc;
 			yLoc = user.yLoc;
 			updatedAt = user.updatedAt.getTime()/1000;
+			renderMap();
 		}
-		//now render the page with necessary params
-		res.render('map', {
-			user : req.user.username,
-			xDest : xDest,
-			yDest : yDest,
-			xLoc : xLoc,
-			yLoc : yLoc,
-			updatedAt : updatedAt
-		});
 	});
 });
 
