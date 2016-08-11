@@ -75,16 +75,15 @@ router.get('/map', function(req, res) {
 				yDest = newUser.yDest;
 				xLoc = newUser.xLoc;
 				yLoc = newUser.yLoc;
-				updatedAt = newUser.updatedAt;
+				updatedAt = newUser.updatedAt.getTime()/1000;
 			});
 		} else {
 			xDest = user.xDest;
 			yDest = user.yDest;
 			xLoc = user.xLoc;
 			yLoc = user.yLoc;
-			updatedAt = user.updatedAt;
+			updatedAt = user.updatedAt.getTime()/1000;
 		}
-		updatedAt = updatedAt.getTime() / 1000;
 		//now render the page with necessary params
 		res.render('map', {
 			user : req.user.username,
