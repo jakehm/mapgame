@@ -1,4 +1,9 @@
 var inited = false;
+var xLoc;
+var xDest;
+var yDest;
+var yLoc;
+var updatedAt;
 var currentLocation;
 var coordList = [];
 var markers = [];
@@ -13,20 +18,6 @@ var coordListBuffer;
 var movementOn = false;
 var test = "test";
 
-var currentTime = new Date().getTime() / 1000;
-var timePassed = currentTime - updatedAt;
-var endingLocation = new google.maps.LatLng({
-	lat: parseFloat(xDest),
-	lng: parseFloat(yDest)
-});
-
-var startingLocation = new google.maps.LatLng({
-	lat: parseFloat(xLoc),
-	lng: parseFloat(yLoc)
-});
-
-currentLocation = startingLocation;
-var destination = endingLocation;
 
 function initialize() {
 
@@ -263,4 +254,55 @@ function listenForSearch() {
 	});
 }
 
-google.maps.event.addDomListener(window, "load", initialize);
+
+//HELPER FUNCTIONS
+//find user object in a list of users by username
+var findUser = function (username, userList) {
+    var currentUser;
+    userList.forEach(function (user) {    
+        if (user.username == username) {
+            currentUser =  user;
+        }
+    });
+    return currentUser;
+};
+
+//get the current time in seconds
+var getCurrentTime = function() {
+    return new Date().getTime() / 1000;
+};
+
+//get the seconds that have passed since a given date
+var getTimePassed = function(d) {
+    currentTime = new Date().getTime()/1000;
+    date = Date.parse(d);
+    date = date.getTime() / 1000;
+    return (currentTime - date);
+};
+
+//turn x and y coordinates into a google maps latlng object
+var toLatLng = function (x, y) {
+    return new google.maps.LatLng({
+        lat: parseFloat(x),
+        lng: parseFloat(y)
+    });
+};
+//END HELPER FUNCTIONS
+
+
+//initialize socket conection, first part that runs on the page
+var socket = io.connect('http://localhost:3000');
+socket.emit('mapInit');
+socket.on('users', function (users) {
+       
+    // declaring initialization variables for the current user
+    var currentUser = findUser(username, users);
+    var origin = toLatLng(currentUser.xloc, currentUser.yloc);
+    var destination = toLatLng(currentUser.xDest, currentUser.yDest);
+    var timePassed = getTimePassed(currentUser.updatedAt);
+    
+    //initialize the map and all the junk above the new code
+    google.maps.event.addDomListener(window, "load", initialize);
+});
+
+

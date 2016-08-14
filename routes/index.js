@@ -60,21 +60,15 @@ router.get('/ping', function(req, res){
 });
 
 router.get('/map', function(req, res) {
-	console.log(req.user);
-	var xDest;
-	var yDest;
-	var xLoc;
-	var yLoc;
-	var updatedAt;
-
+    
+    // debug code
+    if (!req.user) {
+        res.render('map', { username : 'jake' });
+    }
+    else {
 	var renderMap = function() {	
 		res.render('map', {
-			user : req.user.username,
-			xDest : xDest,
-			yDest : yDest,
-			xLoc : xLoc,
-			yLoc : yLoc,
-			updatedAt : updatedAt
+			username : req.user.username,
 		});
 	};
 
@@ -84,23 +78,15 @@ router.get('/map', function(req, res) {
 			var newUser = User({ username : req.user.username});
 			newUser.save(function(err) {
 				if (err) throw err;
-				xDest = newUser.xDest;
-				yDest = newUser.yDest;
-				xLoc = newUser.xLoc;
-				yLoc = newUser.yLoc;
-				updatedAt = newUser.updatedAt.getTime()/1000;
 				renderMap();
 			});
 		} else {
-			xDest = user.xDest;
-			yDest = user.yDest;
-			xLoc = user.xLoc;
-			yLoc = user.yLoc;
-			updatedAt = user.updatedAt.getTime()/1000;
 			renderMap();
 		}
+    
 	});
-});
+    }
+    });
 
 router.post('/map', function(req, res) {
 
