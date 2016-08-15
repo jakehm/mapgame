@@ -18,71 +18,66 @@ var coordListBuffer;
 var movementOn = false;
 var test = "test";
 
-
-function initialize() {
-
-	directionsService = new google.maps.DirectionsService();
-
-	var mapOptions = {
-		zoom: 13,
-		center: startingLocation
-	};
-	map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
-
-
-	var rendererOptions = {
-		map: map
-	};
-	directionsDisplay = new google.maps.DirectionsRenderer(rendererOptions);
-
-	//initializing searchBox
-	var input = document.getElementById('pac-input');
-	searchBox = new google.maps.places.SearchBox(input);
-
-	map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
-
-
-	//bias searchbox results towards current map's viewport
-	map.addListener('bounds_changed', function() {
-		searchBox.setBounds(map.getBounds());
-	});
-
-
-	calculateAndDisplayRoute(startingLocation, endingLocation);
+//the following has to be done because I didn't set some below functions
+//to equal variables (I think), so they are trying to do things with
+//latlng objects when they are initialized, before the latlng objects
+//are defined.
+var loc = new google.maps.LatLng({
+        lat: parseFloat(40.712),
+        lng: parseFloat(-74.006)
+});
+var destination = new google.maps.LatLng({
+        lat: parseFloat(42.360),
+        lng: parseFloat(-71.059)
+});
 
 
 
-	var getResult = function() {
-		if (inited) {
-			var image = 'https://aerpro.com/sites/default/files/styles/minipic/public/images/photo/2004-2007_volvo_xc70_le_station_wagon_2011-03-23.jpg.jpg?itok=V0Dr6xqb';
 
-			var markerOptions = {
-				position: {
-					lat: coordList[0][0],
-					lng: coordList[0][1]
-				},
-				map: map,
-				icon: image
-			};
+//HELPER FUNCTIONS
+//find user object in a list of users by username
+var findUser = function (username, userList) {
+    var currentUser;
+    userList.forEach(function (user) {    
+        if (user.username == username) {
+            currentUser =  user;
+        }
+    });
+    return currentUser;
+};
 
-			marker = new google.maps.Marker(markerOptions);
+//get the current time in seconds
+var getCurrentTime = function() {
+    return new Date().getTime() / 1000;
+};
+
+//get the seconds that have passed since a given date
+var getTimePassed = function(d) {
+    currentTime = new Date().getTime()/1000;
+    date = new Date(d);
+    date = date.getTime() / 1000;
+    return (currentTime - date);
+};
+
+//turn x and y coordinates into a google maps latlng object
+var toLatLng = function (x, y) {
+    var point = new google.maps.LatLng({
+        lat: parseFloat(x),
+        lng: parseFloat(y)
+    });
+    return point;
+};
+//END HELPER FUNCTIONS
 
 
-			moveMarker();
 
 
-			listenForSearch();
-		} else {
-			setTimeout(getResult, 500);
-		}
-	};
-	getResult();
-}
 
-function calculateAndDisplayRoute(origin, destination) {
+//These functions all work with google maps directions services
+var calculateAndDisplayRoute = function(loc, destination) {
 	coordList = [];
 	var routeOptions = {
-		origin: origin,
+		origin: loc,
 		destination: destination,
 		travelMode: google.maps.TravelMode.DRIVING
 	};
@@ -121,44 +116,7 @@ function calculateAndDisplayRoute(origin, destination) {
 	});
 }
 
-
-function moveMarker() {
-	movementOn = true;
-	goSignal = true;
-	coordList = expandCoords(0.0001);
-	var i = 0;
-	timerId = setInterval(function() {
-		if (i > (coordList.length - 1)) {
-			clearInterval(timerId);
-		} else if (goSignal === false) {
-			clearInterval(timerId);
-		} else {
-			x = coordList[i][0];
-			y = coordList[i][1];
-
-			currentLocation = new google.maps.LatLng(x, y);
-			marker.setPosition(currentLocation);
-			i++;
-		}
-	}, 500);
-	movementOn = false;
-}
-
-function expandCoords(speed) {
-	var newCoords = [];
-	var i = 0;
-
-	while (i < (coordList.length - 2)) {
-		var interpCoords = interp(coordList[i], coordList[i + 1], speed);
-		for (var coord in interpCoords) {
-			newCoords.push(interpCoords[coord]);
-		}
-		i++;
-	}
-	return newCoords;
-}
-
-function interp(coord1, coord2, speed) {
+var interp = function(coord1, coord2, speed) {
 	var newCoords = [];
 	var x1 = coord1[0];
 	var x2 = coord2[0];
@@ -183,7 +141,47 @@ function interp(coord1, coord2, speed) {
 }
 
 
-function listenForSearch() {
+var expandCoords = function(speed) {
+	var newCoords = [];
+	var i = 0;
+
+	while (i < (coordList.length - 2)) {
+		var interpCoords = interp(coordList[i], coordList[i + 1], speed);
+		for (var coord in interpCoords) {
+			newCoords.push(interpCoords[coord]);
+		}
+		i++;
+	}
+	return newCoords;
+}
+
+
+var moveMarker = function() {
+	movementOn = true;
+	goSignal = true;
+	coordList = expandCoords(0.0001);
+	var i = 0;
+	timerId = setInterval(function() {
+		if (i > (coordList.length - 1)) {
+			clearInterval(timerId);
+		} else if (goSignal === false) {
+			clearInterval(timerId);
+		} else {
+			x = coordList[i][0];
+			y = coordList[i][1];
+
+			loc = new google.maps.LatLng(x, y);
+			marker.setPosition(loc);
+			i++;
+		}
+	}, 500);
+	movementOn = false;
+}
+//END GOOGLE MAPS SERVICES FUNCTIONS
+
+
+//This functions waits for a user to enter a new location in the ui
+var listenForSearch = function() {
 
 	//listen for eventlistenersent fired
 	var markers = [];
@@ -254,40 +252,69 @@ function listenForSearch() {
 	});
 }
 
+// starts all the google maps service functions
+var initialize = function() {
 
-//HELPER FUNCTIONS
-//find user object in a list of users by username
-var findUser = function (username, userList) {
-    var currentUser;
-    userList.forEach(function (user) {    
-        if (user.username == username) {
-            currentUser =  user;
-        }
-    });
-    return currentUser;
-};
+	directionsService = new google.maps.DirectionsService();
 
-//get the current time in seconds
-var getCurrentTime = function() {
-    return new Date().getTime() / 1000;
-};
+	var mapOptions = {
+		zoom: 13,
+		center: loc
+	};
+	map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
 
-//get the seconds that have passed since a given date
-var getTimePassed = function(d) {
-    currentTime = new Date().getTime()/1000;
-    date = Date.parse(d);
-    date = date.getTime() / 1000;
-    return (currentTime - date);
-};
 
-//turn x and y coordinates into a google maps latlng object
-var toLatLng = function (x, y) {
-    return new google.maps.LatLng({
-        lat: parseFloat(x),
-        lng: parseFloat(y)
-    });
-};
-//END HELPER FUNCTIONS
+	var rendererOptions = {
+		map: map
+	};
+	directionsDisplay = new google.maps.DirectionsRenderer(rendererOptions);
+
+	//initializing searchBox
+	var input = document.getElementById('pac-input');
+	searchBox = new google.maps.places.SearchBox(input);
+
+	map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+
+
+	//bias searchbox results towards current map's viewport
+	map.addListener('bounds_changed', function() {
+		searchBox.setBounds(map.getBounds());
+	});
+
+
+	calculateAndDisplayRoute(loc, destination);
+
+
+
+	var getResult = function() {
+		if (inited) {
+			
+            //image of the player's marker
+            var image = 'https://aerpro.com/sites/default/files/styles/minipic/public/images/photo/2004-2007_volvo_xc70_le_station_wagon_2011-03-23.jpg.jpg?itok=V0Dr6xqb';
+
+			var markerOptions = {
+				position: {
+					lat: coordList[0][0],
+					lng: coordList[0][1]
+				},
+				map: map,
+				icon: image
+			};
+
+			marker = new google.maps.Marker(markerOptions);
+
+
+			moveMarker();
+
+
+			listenForSearch();
+		} else {
+			setTimeout(getResult, 500);
+		}
+	};
+	getResult();
+}
+
 
 
 //initialize socket conection, first part that runs on the page
@@ -297,10 +324,9 @@ socket.on('users', function (users) {
        
     // declaring initialization variables for the current user
     var currentUser = findUser(username, users);
-    var origin = toLatLng(currentUser.xloc, currentUser.yloc);
+    var loc = toLatLng(currentUser.xLoc, currentUser.yLoc);
     var destination = toLatLng(currentUser.xDest, currentUser.yDest);
     var timePassed = getTimePassed(currentUser.updatedAt);
-    
     //initialize the map and all the junk above the new code
     google.maps.event.addDomListener(window, "load", initialize);
 });
