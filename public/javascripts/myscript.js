@@ -74,11 +74,11 @@ var toLatLng = function (x, y) {
 
 
 //These functions all work with google maps directions services
-var calculateAndDisplayRoute = function(loc, destination) {
-	coordList = [];
+var calculateAndDisplayRoute = function(loc, destination, timePassed) {
+	var coordList = [];
 	var routeOptions = {
-		origin: loc,
-		destination: destination,
+		origin:loc,
+		destination:destination,
 		travelMode: google.maps.TravelMode.DRIVING
 	};
 
@@ -141,7 +141,7 @@ var interp = function(coord1, coord2, speed) {
 }
 
 
-var expandCoords = function(speed) {
+var expandCoords = function(coordList, speed) {
 	var newCoords = [];
 	var i = 0;
 
@@ -156,7 +156,7 @@ var expandCoords = function(speed) {
 }
 
 
-var moveMarker = function() {
+var moveMarker = function(coordList, marker) {
 	movementOn = true;
 	goSignal = true;
 	coordList = expandCoords(0.0001);
@@ -181,7 +181,7 @@ var moveMarker = function() {
 
 
 //This functions waits for a user to enter a new location in the ui
-var listenForSearch = function() {
+var listenForSearch = function(searchBox, map, timePassed, coordList, marker) {
 
 	//listen for eventlistenersent fired
 	var markers = [];
@@ -229,7 +229,7 @@ var listenForSearch = function() {
 
 			var getResult3 = function() {
 				if (movementOn === false) {
-					calculateAndDisplayRoute(marker.getPosition(), places[0].geometry.location);
+					calculateAndDisplayRoute(marker.getPosition(), places[0].geometry.location, timePassed);
 					destination = places[0].geometry.location;
 				}
 				else {
@@ -241,8 +241,8 @@ var listenForSearch = function() {
 
 			var getResult2 = function() {
 				if (inited === true && movementOn === false) {
-					moveMarker();
-					//listenForSearch();
+					moveMarker(coordList, marker);
+					
 				} else {
 					setTimeout(getResult2, 500);
 				}
@@ -253,7 +253,7 @@ var listenForSearch = function() {
 }
 
 // starts all the google maps service functions
-var initialize = function() {
+var initialize = function(searchBox, map, timePassed, coordList, marker, loc, destination) {
 
 	directionsService = new google.maps.DirectionsService();
 
@@ -282,7 +282,7 @@ var initialize = function() {
 	});
 
 
-	calculateAndDisplayRoute(loc, destination);
+	calculateAndDisplayRoute(loc, destination, timePassed);
 
 
 
@@ -304,10 +304,10 @@ var initialize = function() {
 			marker = new google.maps.Marker(markerOptions);
 
 
-			moveMarker();
+			moveMarker(coordList, marker);
 
 
-			listenForSearch();
+			listenForSearch(searchBox, map, timePassed, coordList, marker);
 		} else {
 			setTimeout(getResult, 500);
 		}
@@ -328,7 +328,7 @@ socket.on('users', function (users) {
     var destination = toLatLng(currentUser.xDest, currentUser.yDest);
     var timePassed = getTimePassed(currentUser.updatedAt);
     //initialize the map and all the junk above the new code
-    google.maps.event.addDomListener(window, "load", initialize);
+    google.maps.event.addDomListener(window, "load", initialize(searchBox, map, timePassed, coordList, marker, loc, destination));
 });
 
 
