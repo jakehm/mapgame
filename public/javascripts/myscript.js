@@ -95,7 +95,7 @@ var calculateAndDisplayRoute = function(coordList, loc, destination, timePassed)
 				for (var j = 0; j < steps.length; j++) {
 					var path = steps[j].path;
 					for (k = 0; k < path.length; k++) {
-						coordList.push([path[k].lat(), path[k].lng()]);
+						coordList.push([[path[k].lat(), path[k].lng()]]);
 					}
 				}	
 			}
@@ -329,7 +329,7 @@ socket.on('users', function (users) {
     var destination = toLatLng(currentUser.xDest, currentUser.yDest);
     var timePassed = getTimePassed(currentUser.updatedAt);
     //trying this to get it working but this is wrong
-    var coordList = [destination.lat(), destination.lng()];
+    var coordList = [[destination.lat(), destination.lng()]];
     //initialize the map and all the junk above the new code
     google.maps.event.addDomListener(window, "load", initialize(searchBox, map, timePassed, coordList, marker, loc, destination));
 });
