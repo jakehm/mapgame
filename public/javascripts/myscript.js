@@ -74,8 +74,8 @@ var toLatLng = function (x, y) {
 
 
 //These functions all work with google maps directions services
-var calculateAndDisplayRoute = function(loc, destination, timePassed) {
-	var coordList = [];
+var calculateAndDisplayRoute = function(coordList, loc, destination, timePassed) {
+	coordList = [];
 	var routeOptions = {
 		origin:loc,
 		destination:destination,
@@ -109,6 +109,7 @@ var calculateAndDisplayRoute = function(loc, destination, timePassed) {
 					timePassed = null;
 				}
 			}
+            coordList.push([destination.lat(), destination.lng()]); 
 			inited = true;
 		} else {
 			window.alert('Directions request failed due to ' + status);
@@ -170,7 +171,8 @@ var moveMarker = function(coordList, marker) {
 			x = coordList[i][0];
 			y = coordList[i][1];
 
-			loc = new google.maps.LatLng(x, y);
+			var loc = new google.maps.LatLng(x, y);
+            console.log(loc.lng());
 			marker.setPosition(loc);
 			i++;
 		}
@@ -229,7 +231,7 @@ var listenForSearch = function(searchBox, map, timePassed, coordList, marker) {
 
 			var getResult3 = function() {
 				if (movementOn === false) {
-					calculateAndDisplayRoute(marker.getPosition(), places[0].geometry.location, timePassed);
+					calculateAndDisplayRoute(coordList, marker.getPosition(), places[0].geometry.location, timePassed);
 					destination = places[0].geometry.location;
 				}
 				else {
@@ -282,7 +284,7 @@ var initialize = function(searchBox, map, timePassed, coordList, marker, loc, de
 	});
 
 
-	calculateAndDisplayRoute(loc, destination, timePassed);
+	calculateAndDisplayRoute(coordList, loc, destination, timePassed);
 
 
 
@@ -321,12 +323,13 @@ var initialize = function(searchBox, map, timePassed, coordList, marker, loc, de
 var socket = io.connect('http://localhost:3000');
 socket.emit('mapInit');
 socket.on('users', function (users) {
-       
     // declaring initialization variables for the current user
     var currentUser = findUser(username, users);
     var loc = toLatLng(currentUser.xLoc, currentUser.yLoc);
     var destination = toLatLng(currentUser.xDest, currentUser.yDest);
     var timePassed = getTimePassed(currentUser.updatedAt);
+    //trying this to get it working but this is wrong
+    var coordList = [destination.lat(), destination.lng()];
     //initialize the map and all the junk above the new code
     google.maps.event.addDomListener(window, "load", initialize(searchBox, map, timePassed, coordList, marker, loc, destination));
 });
