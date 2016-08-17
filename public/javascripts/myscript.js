@@ -14,9 +14,9 @@ var directionsService;
 var timerId;
 var goSignal;
 var marker;
-var coordListBuffer;
 var movementOn = false;
 var test = "test";
+var timePassed;
 
 //the following has to be done because I didn't set some below functions
 //to equal variables (I think), so they are trying to do things with
@@ -30,7 +30,6 @@ var destination = new google.maps.LatLng({
         lat: parseFloat(42.360),
         lng: parseFloat(-71.059)
 });
-
 
 
 
@@ -74,7 +73,7 @@ var toLatLng = function (x, y) {
 
 
 //These functions all work with google maps directions services
-var calculateAndDisplayRoute = function(coordList, loc, destination, timePassed) {
+var calculateAndDisplayRoute = function(loc, destination) {
 	coordList = [];
 	var routeOptions = {
 		origin:loc,
@@ -95,7 +94,7 @@ var calculateAndDisplayRoute = function(coordList, loc, destination, timePassed)
 				for (var j = 0; j < steps.length; j++) {
 					var path = steps[j].path;
 					for (k = 0; k < path.length; k++) {
-						coordList.push([[path[k].lat(), path[k].lng()]]);
+						coordList.push([path[k].lat(), path[k].lng()]);
 					}
 				}	
 			}
@@ -157,10 +156,10 @@ var expandCoords = function(coordList, speed) {
 }
 
 
-var moveMarker = function(coordList, marker) {
+var moveMarker = function() {
 	movementOn = true;
 	goSignal = true;
-	coordList = expandCoords(0.0001);
+	coordList = expandCoords(coordList, 0.0001);
 	var i = 0;
 	timerId = setInterval(function() {
 		if (i > (coordList.length - 1)) {
@@ -172,7 +171,6 @@ var moveMarker = function(coordList, marker) {
 			y = coordList[i][1];
 
 			var loc = new google.maps.LatLng(x, y);
-            console.log(loc.lng());
 			marker.setPosition(loc);
 			i++;
 		}
@@ -183,7 +181,7 @@ var moveMarker = function(coordList, marker) {
 
 
 //This functions waits for a user to enter a new location in the ui
-var listenForSearch = function(searchBox, map, timePassed, coordList, marker) {
+var listenForSearch = function() {
 
 	//listen for eventlistenersent fired
 	var markers = [];
@@ -231,7 +229,7 @@ var listenForSearch = function(searchBox, map, timePassed, coordList, marker) {
 
 			var getResult3 = function() {
 				if (movementOn === false) {
-					calculateAndDisplayRoute(coordList, marker.getPosition(), places[0].geometry.location, timePassed);
+					calculateAndDisplayRoute(marker.getPosition(), places[0].geometry.location);
 					destination = places[0].geometry.location;
 				}
 				else {
@@ -243,7 +241,7 @@ var listenForSearch = function(searchBox, map, timePassed, coordList, marker) {
 
 			var getResult2 = function() {
 				if (inited === true && movementOn === false) {
-					moveMarker(coordList, marker);
+					moveMarker();
 					
 				} else {
 					setTimeout(getResult2, 500);
@@ -255,16 +253,16 @@ var listenForSearch = function(searchBox, map, timePassed, coordList, marker) {
 }
 
 // starts all the google maps service functions
-var initialize = function(searchBox, map, timePassed, coordList, marker, loc, destination) {
+var initialize = function(loc, destination) {
 
 	directionsService = new google.maps.DirectionsService();
-
+/* trying this thing where i bring map into global scope
 	var mapOptions = {
 		zoom: 13,
 		center: loc
 	};
 	map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
-
+*/
 
 	var rendererOptions = {
 		map: map
@@ -284,7 +282,7 @@ var initialize = function(searchBox, map, timePassed, coordList, marker, loc, de
 	});
 
 
-	calculateAndDisplayRoute(coordList, loc, destination, timePassed);
+	calculateAndDisplayRoute(loc, destination);
 
 
 
@@ -306,10 +304,10 @@ var initialize = function(searchBox, map, timePassed, coordList, marker, loc, de
 			marker = new google.maps.Marker(markerOptions);
 
 
-			moveMarker(coordList, marker);
+			moveMarker();
 
 
-			listenForSearch(searchBox, map, timePassed, coordList, marker);
+			listenForSearch();
 		} else {
 			setTimeout(getResult, 500);
 		}
@@ -331,7 +329,21 @@ socket.on('users', function (users) {
     //trying this to get it working but this is wrong
     var coordList = [[destination.lat(), destination.lng()]];
     //initialize the map and all the junk above the new code
-    google.maps.event.addDomListener(window, "load", initialize(searchBox, map, timePassed, coordList, marker, loc, destination));
+    
+
+//bringing map to outer global scope:
+	var mapOptions = {
+		zoom: 13,
+		center: loc
+	};
+	map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
+
+    
+    
+    
+    
+    
+    google.maps.event.addDomListener(window, "load", initialize(loc, destination));
 });
 
 
