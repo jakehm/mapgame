@@ -17,6 +17,8 @@ var marker;
 var movementOn = false;
 var test = "test";
 var timePassed;
+var totalDuration;
+
 
 //the following has to be done because I didn't set some below functions
 //to equal variables (I think), so they are trying to do things with
@@ -70,49 +72,7 @@ var toLatLng = function (x, y) {
 
 
 //These functions all work with google maps directions services
-var calculateAndDisplayRoute = function(loc, destination) {
-	coordList = [];
-	var routeOptions = {
-		origin:loc,
-		destination:destination,
-		travelMode: google.maps.TravelMode.DRIVING
-	};
-
-	directionsService.route(routeOptions, function(response, status) {
-		if (status === google.maps.DirectionsStatus.OK) {
-			directionsDisplay.setDirections(response);
-
-			//getting coords from inner lists      
-			var legs = response.routes[0].legs;
-			var totalDuration = 0;
-			for (var i = 0; i < legs.length; i++) {
-				totalDuration += legs[i].duration.value; 
-				var steps = legs[i].steps;
-				for (var j = 0; j < steps.length; j++) {
-					var path = steps[j].path;
-					for (k = 0; k < path.length; k++) {
-						coordList.push([path[k].lat(), path[k].lng()]);
-					}
-				}	
-			}
-			//predicts location while you were gone
-			if(timePassed) {
-				var fractionTraveled = timePassed / totalDuration;
-				if (fractionTraveled < 1){
-					var startIndex = fractionTraveled*coordList.length;
-					startIndex = Math.round(startIndex);
-					coordList = coordList.slice(startIndex);
-					timePassed = null;
-				}
-			}
-            coordList.push([destination.lat(), destination.lng()]); 
-			inited = true;
-		} else {
-			window.alert('Directions request failed due to ' + status);
-		}
-	});
-}
-
+//
 var interp = function(coord1, coord2, speed) {
 	var newCoords = [];
 	var x1 = coord1[0];
@@ -152,11 +112,69 @@ var expandCoords = function(coordList, speed) {
 	return newCoords;
 }
 
+//this function serves several purposes.
+//It calcultes the route and puts it into a list of coords [[x,y],[x,y]...]
+//It displays the line.
+//It sends the new route data to the server.
+//Some functionality is there only for the initial route and some is
+//only for a new route.
+var calculateAndDisplayRoute = function(loc, destination) {
+	coordList = [];
+	var routeOptions = {
+		origin:loc,
+		destination:destination,
+		travelMode: google.maps.TravelMode.DRIVING
+	};
+
+	directionsService.route(routeOptions, function(response, status) {
+		if (status === google.maps.DirectionsStatus.OK) {
+			directionsDisplay.setDirections(response);
+
+			//getting coords from inner lists      
+			var legs = response.routes[0].legs;
+			var totalDuration = 0;
+			for (var i = 0; i < legs.length; i++) {
+				totalDuration += legs[i].duration.value; 
+				var steps = legs[i].steps;
+				for (var j = 0; j < steps.length; j++) {
+					var path = steps[j].path;
+					for (k = 0; k < path.length; k++) {
+						coordList.push([path[k].lat(), path[k].lng()]);
+					}
+				}	
+			}
+			//predicts location while you were gone
+			if(timePassed) {
+				var fractionTraveled = timePassed / totalDuration;
+				if (fractionTraveled < 1){
+					var startIndex = fractionTraveled*coordList.length;
+					startIndex = Math.round(startIndex);
+					coordList = coordList.slice(startIndex);
+				}
+                else if (fractionTraveled >=1) {
+                    coordList = coordList.slice(-1);
+                }
+				timePassed = null;
+			}
+            else {
+                socket.emit('updateServer', {
+                    username: username,
+                    totalDuration: totalDuration,
+                    coordList: coordList
+                });
+            }
+            coordList.push([destination.lat(), destination.lng()]); 
+			inited = true;
+		} else {
+			window.alert('Directions request failed due to ' + status);
+		}
+	});
+}
 
 var moveMarker = function() {
 	movementOn = true;
 	goSignal = true;
-	coordList = expandCoords(coordList, 0.0001);
+    coordList = expandCoords(coordList, 0.0001);
 	var i = 0;
 	timerId = setInterval(function() {
 		if (i > (coordList.length - 1)) {
@@ -175,7 +193,7 @@ var moveMarker = function() {
 	movementOn = false;
 }
 //END GOOGLE MAPS SERVICES FUNCTIONS
-
+    
 
 //This functions waits for a user to enter a new location in the ui
 var listenForSearch = function() {
@@ -250,7 +268,7 @@ var listenForSearch = function() {
 }
 
 // starts all the google maps service functions
-var initialize = function(loc, destination) {
+var initialize = function(loc, destination, timePassed) {
 
 	directionsService = new google.maps.DirectionsService();
 /* trying this thing where i bring map into global scope
@@ -317,6 +335,9 @@ var initialize = function(loc, destination) {
 //initialize socket conection, first part that runs on the page
 var socket = io.connect('http://localhost:3000');
 socket.emit('mapInit');
+
+//this goes off after the server has received another client's update
+socket.on('updateClient', function(user){return;});
 socket.on('users', function (users) {
     // declaring initialization variables for the current user
     var currentUser = findUser(username, users);
@@ -334,7 +355,7 @@ socket.on('users', function (users) {
 	};
 	map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
     
-    google.maps.event.addDomListener(window, "load", initialize(loc, destination));
+    google.maps.event.addDomListener(window, "load", initialize(loc, destination, timePassed));
 });
 
 

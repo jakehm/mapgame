@@ -29,13 +29,28 @@ exports = module.exports = function(io){
     */
     io.sockets.on('connection', function (socket) {
         console.log('a user connectioned');
-        
+       
+        //when the map page initializes, send over a list of user objects
         socket.on('mapInit', function() {
             User.find({}, function(err, users) {
                 socket.emit('users', users);
             });        
         });
 
+        //when a user picks a new route, update the database and broadcast
+        socket.on('updateServer', function(data) {
+            var query = {username: data.username};
+            var update = {$set:{
+                duration: data.totalDuration,
+                coordList: data.coordList
+            }};
+            User.findOneAndUpdate(query, update, {new:true}, function(err, user) {
+                user.save(function(err) {
+                    if (err) return handleError(err);
+                    socket.broadcast.emit('updateClient', user);               
+                });
+            });
+        });
 
 
         socket.on('disconnect', function(){
