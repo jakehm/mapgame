@@ -54,7 +54,7 @@ passport.deserializeUser(Account.deserializeUser());
 
 // mongoose
 mongoose.Promise = global.Promise;
-mongoose.connect('mongodb://localhost/passport_local_mongoose_express4');
+mongoose.connect('mongodb://localhost/map_game');
 
 
 

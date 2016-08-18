@@ -3,11 +3,9 @@ var Schema = mongoose.Schema;
 
 var userSchema = new Schema({
 	username: String,
-	xLoc: {type: Number, default: 44.8012},
-	yLoc: {type: Number, default: -68.7778},
-	xDest: {type: Number, default: 44.7967},
-	yDest: {type: Number, default: -68.7614},
-	createdAt: Date,
+    coordList: {type: Array, default: [[44.7967, -68.7614],[44.7967, -68.7614]]},
+	duration: {type: Number, default: 0},
+    createdAt: Date,
 	updatedAt: Date
 });
 

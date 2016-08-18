@@ -69,9 +69,6 @@ var toLatLng = function (x, y) {
 //END HELPER FUNCTIONS
 
 
-
-
-
 //These functions all work with google maps directions services
 var calculateAndDisplayRoute = function(loc, destination) {
 	coordList = [];
@@ -323,25 +320,19 @@ socket.emit('mapInit');
 socket.on('users', function (users) {
     // declaring initialization variables for the current user
     var currentUser = findUser(username, users);
-    var loc = toLatLng(currentUser.xLoc, currentUser.yLoc);
-    var destination = toLatLng(currentUser.xDest, currentUser.yDest);
+    var coordList = currentUser.coordList;
+    var loc = coordList[0];
+    loc = toLatLng(loc[0], loc[1]);
+    var destination = coordList[coordList.length-1];
+    destination = toLatLng(destination[0], destination[1]);
     var timePassed = getTimePassed(currentUser.updatedAt);
-    //trying this to get it working but this is wrong
-    var coordList = [[destination.lat(), destination.lng()]];
     //initialize the map and all the junk above the new code
-    
-
-//bringing map to outer global scope:
+    //bringing map to outer global scope:
 	var mapOptions = {
 		zoom: 13,
 		center: loc
 	};
 	map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
-
-    
-    
-    
-    
     
     google.maps.event.addDomListener(window, "load", initialize(loc, destination));
 });

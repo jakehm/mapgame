@@ -2,7 +2,8 @@ exports = module.exports = function(io){
     
     var User = require('./models/user');
 
-   /* 
+   //Delete the comment below
+    /* 
 	User.findOne({username : req.user.username}, function (err,user){
 		if (err) return handleError(err);
 		if (!user) {
