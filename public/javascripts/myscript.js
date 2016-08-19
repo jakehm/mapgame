@@ -271,13 +271,6 @@ var listenForSearch = function() {
 var initialize = function(loc, destination, timePassed) {
 
 	directionsService = new google.maps.DirectionsService();
-/* trying this thing where i bring map into global scope
-	var mapOptions = {
-		zoom: 13,
-		center: loc
-	};
-	map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
-*/
 
 	var rendererOptions = {
 		map: map
@@ -297,8 +290,8 @@ var initialize = function(loc, destination, timePassed) {
 	});
 
 
-	calculateAndDisplayRoute(loc, destination);
-
+	calculateAndDisplayRoute(loc, destination, timePassed);
+    timePassed = null;
 
 
 	var getResult = function() {
@@ -333,7 +326,7 @@ var initialize = function(loc, destination, timePassed) {
 
 
 //initialize socket conection, first part that runs on the page
-var socket = io.connect('http://localhost:3000');
+var socket = io.connect();
 socket.emit('mapInit');
 
 //this goes off after the server has received another client's update
@@ -346,7 +339,7 @@ socket.on('users', function (users) {
     loc = toLatLng(loc[0], loc[1]);
     var destination = coordList[coordList.length-1];
     destination = toLatLng(destination[0], destination[1]);
-    var timePassed = getTimePassed(currentUser.updatedAt);
+    timePassed = getTimePassed(currentUser.updatedAt);
     //initialize the map and all the junk above the new code
     //bringing map to outer global scope:
 	var mapOptions = {
