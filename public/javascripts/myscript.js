@@ -123,6 +123,56 @@ var expandCoords = function(coordList, speed) {
 	return newCoords;
 }
 
+
+
+
+//
+//these functions are to deal with other users
+//
+//
+
+//this function takes in a user object and returns a coordList taking 
+//into account where he would be according to his last updated time
+var extrapolate= function(user) {
+    var timePassed = getTimePassed(user.updatedAt);
+	var fractionTraveled = timePassed / user.duration;
+	if (fractionTraveled < 1){
+	    var startIndex = fractionTraveled*coordList.length;
+		startIndex = Math.round(startIndex);
+		user.coordList = user.coordList.slice(startIndex);
+	}
+    else if (fractionTraveled >=1) {
+        user.coordList = user.coordList.slice(-1);
+    }
+    return user.coordList;
+}
+
+var generateMarker = function(user) {
+	var markerOptions = {
+		position: {
+			lat: user.coordList[0][0],
+			lng: user.coordList[0][1]
+		},
+		map: map,
+	};
+	var marker = new google.maps.Marker(markerOptions);
+    return marker;
+};
+
+//this initializes a single user.  It makes use of above helpers.    
+var initUser = function(user) {
+    return user;
+};
+
+//this takes a list of other user objects and maps them all
+var initOtherUsers = function (userList) {
+    userList.forEach(function (user) {
+        initUser(user);
+    });
+};
+
+
+
 //this function serves several purposes.
 //It calcultes the route and puts it into a list of coords [[x,y],[x,y]...]
 //It displays the line.
@@ -277,18 +327,6 @@ var listenForSearch = function() {
 		}); //end of places for each loop
 	});
 }
-
-var initUser = function(user) {
-    console.log(user);
-};
-
-//this takes a list of other user objects and maps them all
-var initOtherUsers = function (userList) {
-    userList.forEach(function (user) {
-        initUser(user);
-    });
-};
-
 
 // starts all the google maps service functions
 var initialize = function(loc, destination, timePassed, otherUsers) {
