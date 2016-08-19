@@ -37,6 +37,17 @@ var destination = new google.maps.LatLng({
 
 //HELPER FUNCTIONS
 //find user object in a list of users by username
+
+//return the users other than the current user in a list of objects
+var getOtherUsers = function(username, userList){
+    var resultList = [];
+    userList.forEach(function(user) {
+        if (user.username!=username) resultList.push(user);
+    });
+    return resultList;
+};
+
+//return the current user as object
 var findUser = function (username, userList) {
     var currentUser;
     userList.forEach(function (user) {    
@@ -267,8 +278,20 @@ var listenForSearch = function() {
 	});
 }
 
+var initUser = function(user) {
+    console.log(user);
+};
+
+//this takes a list of other user objects and maps them all
+var initOtherUsers = function (userList) {
+    userList.forEach(function (user) {
+        initUser(user);
+    });
+};
+
+
 // starts all the google maps service functions
-var initialize = function(loc, destination, timePassed) {
+var initialize = function(loc, destination, timePassed, otherUsers) {
 
 	directionsService = new google.maps.DirectionsService();
 
@@ -321,8 +344,8 @@ var initialize = function(loc, destination, timePassed) {
 		}
 	};
 	getResult();
+    initOtherUsers(otherUsers);
 }
-
 
 
 //initialize socket conection, first part that runs on the page
@@ -330,11 +353,16 @@ var socket = io.connect();
 socket.emit('mapInit');
 
 //this goes off after the server has received another client's update
-socket.on('updateClient', function(user){return;});
+socket.on('updateClient', function(user){
+     return;     
+});
+
 socket.on('users', function (users) {
+
     // declaring initialization variables for the current user
+    var otherUsers = getOtherUsers(username, users);
     var currentUser = findUser(username, users);
-    var coordList = currentUser.coordList;
+    coordList = currentUser.coordList;
     var loc = coordList[0];
     loc = toLatLng(loc[0], loc[1]);
     var destination = coordList[coordList.length-1];
@@ -348,7 +376,7 @@ socket.on('users', function (users) {
 	};
 	map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
     
-    google.maps.event.addDomListener(window, "load", initialize(loc, destination, timePassed));
+    google.maps.event.addDomListener(window, "load", initialize(loc, destination, timePassed, otherUsers));
 });
 
 
