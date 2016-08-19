@@ -1,7 +1,8 @@
 {
 	"apps" : [{
-		"script"      : "npm start",
-		"watch"       : false,
+		"script"      : "bin/www",
+		"watch"       : true,
+		"ignore_watch": ["node_modules", "data", "npm-debug.log"],
 		"env": {
 			"NODE_ENV": "development",
 		},
