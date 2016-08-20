@@ -161,27 +161,26 @@ var generateMarker = function(user) {
 };
 
 //moves the marker along the coordList
+//In the future maybe but all the movements in the same setInterval
+//and then vary the amount of coords depending on duration of route
 var travel = function(user) {
-    var expandedList = expandCoords(user.coordList, 0.0001);
-    var interval = (user.duration-getTimePassed(user.updatedAt)) * 1000 / expandedList.length;
+    user.coordList = expandCoords(user.coordList, 0.0001);
+    user.interval = (user.duration-getTimePassed(user.updatedAt)) * 1000 / user.coordList.length;
 
-	var counter = 0;
-	timerId2 = setInterval(function() {
-		if (counter > (expandedList.length - 1)) {
-			clearInterval(timerId2);
-		} else if (user.stop) {
-			clearInterval(timerId2);
-            user.stop = false;
+	user.counter = 0;
+	user.timerId = setInterval(function() {
+		if (user.counter > (user.coordList.length - 1)) {
+			clearInterval(user.timerId);
 		} else {
-			var x = expandedList[counter][0];
-			var y = expandedList[counter][1];
-
-			var loc = new google.maps.LatLng(x, y);
-            user.marker.setPosition(loc);
-			counter++;
-            console.log(counter);
+            user.marker.setPosition(
+                new google.maps.LatLng(
+                    user.coordList[user.counter][0],
+                    user.coordList[user.counter][1]
+                )
+            );
+			user.counter++;
 		}
-	}, interval);
+	}, user.interval);
 };
 
 //this initializes a single user.  It makes use of above helpers.    
@@ -418,10 +417,6 @@ var initialize = function(loc, destination, timePassed, otherUsers) {
 var socket = io.connect();
 socket.emit('mapInit');
 
-//this goes off after the server has received another client's update
-socket.on('updateClient', function(user){
-     return;     
-});
 
 socket.on('users', function (users) {
 
@@ -443,6 +438,15 @@ socket.on('users', function (users) {
 	map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
     
     google.maps.event.addDomListener(window, "load", initialize(loc, destination, timePassed, otherUsers));
+
+    
+    //this goes off after the server has received another client's update
+    socket.on('updateClient', function(user){
+        user = findUser(user.username, otherUsers);
+        clearInterval(user.timerId);
+        initUser(user);
+    });
+
 });
 
 
