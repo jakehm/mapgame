@@ -12,6 +12,7 @@ var searchBox;
 var directionsDisplay;
 var directionsService;
 var timerId;
+var timerId2;
 var goSignal;
 var marker;
 var movementOn = false;
@@ -137,7 +138,7 @@ var extrapolate= function(user) {
     var timePassed = getTimePassed(user.updatedAt);
 	var fractionTraveled = timePassed / user.duration;
 	if (fractionTraveled < 1){
-	    var startIndex = fractionTraveled*coordList.length;
+	    var startIndex = fractionTraveled*user.coordList.length;
 		startIndex = Math.round(startIndex);
 		user.coordList = user.coordList.slice(startIndex);
 	}
@@ -162,23 +163,23 @@ var generateMarker = function(user) {
 //moves the marker along the coordList
 var travel = function(user) {
     var expandedList = expandCoords(user.coordList, 0.0001);
-    var interval = user.duration * 1000 / expandedList.length;
+    var interval = (user.duration-getTimePassed(user.updatedAt)) * 1000 / expandedList.length;
 
-	var i = 0;
-	var timerId = setInterval(function() {
-		if (i > (expandedList.length - 1)) {
-			clearInterval(timerId);
+	var counter = 0;
+	timerId2 = setInterval(function() {
+		if (counter > (expandedList.length - 1)) {
+			clearInterval(timerId2);
 		} else if (user.stop) {
-			clearInterval(timerId);
+			clearInterval(timerId2);
             user.stop = false;
 		} else {
-			var x = expandedList[i][0];
-			var y = expandedList[i][1];
+			var x = expandedList[counter][0];
+			var y = expandedList[counter][1];
 
 			var loc = new google.maps.LatLng(x, y);
-			user.marker.setMap(map);
             user.marker.setPosition(loc);
-			i++;
+			counter++;
+            console.log(counter);
 		}
 	}, interval);
 };
