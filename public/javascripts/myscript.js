@@ -155,13 +155,39 @@ var generateMarker = function(user) {
 		},
 		map: map,
 	};
-	var marker = new google.maps.Marker(markerOptions);
-    return marker;
+	user.marker = new google.maps.Marker(markerOptions);
+    return user;
+};
+
+//moves the marker along the coordList
+var travel = function(user) {
+    var expandedList = expandCoords(user.coordList, 0.0001);
+    var interval = user.duration * 1000 / expandedList.length;
+
+	var i = 0;
+	var timerId = setInterval(function() {
+		if (i > (expandedList.length - 1)) {
+			clearInterval(timerId);
+		} else if (user.stop) {
+			clearInterval(timerId);
+            user.stop = false;
+		} else {
+			var x = expandedList[i][0];
+			var y = expandedList[i][1];
+
+			var loc = new google.maps.LatLng(x, y);
+			user.marker.setMap(map);
+            user.marker.setPosition(loc);
+			i++;
+		}
+	}, interval);
 };
 
 //this initializes a single user.  It makes use of above helpers.    
 var initUser = function(user) {
-    return user;
+    extrapolate( user);
+    generateMarker(user);
+    travel(user);
 };
 
 //this takes a list of other user objects and maps them all
@@ -243,8 +269,8 @@ var moveMarker = function() {
 		} else if (goSignal === false) {
 			clearInterval(timerId);
 		} else {
-			x = coordList[i][0];
-			y = coordList[i][1];
+			var x = coordList[i][0];
+			var y = coordList[i][1];
 
 			var loc = new google.maps.LatLng(x, y);
 			marker.setPosition(loc);
@@ -382,6 +408,7 @@ var initialize = function(loc, destination, timePassed, otherUsers) {
 		}
 	};
 	getResult();
+
     initOtherUsers(otherUsers);
 }
 
