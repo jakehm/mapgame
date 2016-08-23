@@ -148,6 +148,19 @@ var extrapolate= function(user) {
     return user.coordList;
 }
 
+
+//var calcDistance = function ()
+
+//creates an info window that shows various information about a user
+var createInfoWindow = function(user) {
+    var contentString = '<h3>'+user.username+'</h3><br>';
+    var infoWindow = new google.maps.InfoWindow({
+        content: contentString
+    });
+    return infoWindow;
+};
+
+//generate other users markers
 var generateMarker = function(user) {
 	var markerOptions = {
 		position: {
@@ -157,8 +170,18 @@ var generateMarker = function(user) {
 		map: map,
 	};
 	user.marker = new google.maps.Marker(markerOptions);
+    
+    //shows information about a player when you click on their marker
+    user.marker.addListener('click', function() {
+        infoWindow = createInfoWindow(user);
+        infoWindow.open(map, user.marker);
+    });
+    
     return user;
 };
+
+
+
 
 //moves the marker along the coordList
 //In the future maybe but all the movements in the same setInterval
