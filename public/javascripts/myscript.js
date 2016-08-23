@@ -414,7 +414,7 @@ var initialize = function(loc, destination, timePassed, otherUsers) {
 
 
 //initialize socket conection, first part that runs on the page
-var socket = io.connect();
+var socket = io.connect();//'lightninging.us:3000',{secure:true});
 socket.emit('mapInit');
 
 
