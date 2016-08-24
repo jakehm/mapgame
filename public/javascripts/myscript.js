@@ -148,15 +148,39 @@ var extrapolate= function(user) {
     return user.coordList;
 }
 
-
-//var calcDistance = function ()
+//calculates the distance between two user objects
+//coords are in the form of [x,y]
+var calcDistance = function (coordA, coordB) {
+    var dx2 = Math.pow((coordA[0]-coordB[0]),2);
+    var dy2 = Math.pow((coordA[1]-coordB[1]),2);
+    return Math.sqrt(dx2 + dy2).toFixed(2);
+};
 
 //creates an info window that shows various information about a user
+//including a kill button
 var createInfoWindow = function(user) {
-    var contentString = '<h3>'+user.username+'</h3><br>';
+    var markerLoc1 = marker.getPosition();
+    var markerLoc2 = user.marker.getPosition();
+    var coordA = [markerLoc1.lat(), markerLoc1.lng()];
+    var coordB = [markerLoc2.lat(), markerLoc2.lng()];
+    var dist = calcDistance(coordA, coordB);
+    var contentString = user.username+'<br>distance: '
+        +dist;
+    //if (dist<1) {
+        contentString+='<br><button id="killButton">Kill</button>';
+        
+        //when kill button is clicked, socket emit to alter database
+        $(document).on("click", "#killButton", function(e) {
+           socket.emit('kill', {
+                killed: user.username,
+                killedBy: username
+           }); 
+        });
+    //}
     var infoWindow = new google.maps.InfoWindow({
         content: contentString
     });
+
     return infoWindow;
 };
 
@@ -179,8 +203,6 @@ var generateMarker = function(user) {
     
     return user;
 };
-
-
 
 
 //moves the marker along the coordList
@@ -208,9 +230,13 @@ var travel = function(user) {
 
 //this initializes a single user.  It makes use of above helpers.    
 var initUser = function(user) {
-    extrapolate( user);
-    generateMarker(user);
-    travel(user);
+    if(user.killedBy) {
+        return;
+    } else {
+        extrapolate(user);
+        generateMarker(user);
+        travel(user);
+    }
 };
 
 //this takes a list of other user objects and maps them all
@@ -465,11 +491,27 @@ socket.on('users', function (users) {
     
     //this goes off after the server has received another client's update
     socket.on('updateClient', function(user){
-        user = findUser(user.username, otherUsers);
-        clearInterval(user.timerId);
+        // clear the old users setInterval and make a new user object
+        var clearUser = findUser(user.username, otherUsers);
+        clearInterval(clearUser.timerId);
         initUser(user);
     });
 
+    //If someone dies, broadcast it to everyone but the killer.
+    //(The killer doesn't need to send data to the server to see the effects
+    //of a kill.)
+    //If the current user is the one that is killed, send them to the death screen.
+    socket.on('death', function(user){
+        if (user.username == username) {
+            console.log("you're killed by "+ user.killedBy)//placeholder for send to deathScreen();
+        }
+        else { 
+            var clearUser = findUser(user.username, otherUsers);
+            clearInterval(clearUser.timerId);
+        //send user to be reinitialized, which checks for killed condition
+            initUser(user);
+        }
+    });
 });
 
 

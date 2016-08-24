@@ -5,6 +5,7 @@ var userSchema = new Schema({
 	username: String,
     coordList: {type: Array, default: [[44.7967, -68.7614],[44.7967, -68.7614]]},
 	duration: {type: Number, default: 0},
+    killedBy: {type: String, default:null},
     createdAt: Date,
 	updatedAt: Date
 });
