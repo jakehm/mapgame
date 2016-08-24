@@ -80,6 +80,19 @@ var toLatLng = function (x, y) {
     });
     return point;
 };
+
+//This function is called if the current user is dead or dies.
+//It is checked for in two places:
+//1 on loading the page
+//2 on the death event created by socket.io
+var deathScreen = function(user){
+    var contentString =
+        'You were killed by '
+        +user.killedBy
+        +'<br><a class="button" href ="/logout">Back</a>';
+    document.write(contentString);
+};
+    
 //END HELPER FUNCTIONS
 
 
@@ -132,6 +145,11 @@ var expandCoords = function(coordList, speed) {
 //
 //
 
+var clearUser = function(user){
+    clearInterval(user.timerId);
+    user.marker.setMap(null);
+};
+
 //this function takes in a user object and returns a coordList taking 
 //into account where he would be according to his last updated time
 var extrapolate= function(user) {
@@ -175,6 +193,7 @@ var createInfoWindow = function(user) {
                 killed: user.username,
                 killedBy: username
            }); 
+            clearUser(user);
         });
     //}
     var infoWindow = new google.maps.InfoWindow({
@@ -227,6 +246,7 @@ var travel = function(user) {
 		}
 	}, user.interval);
 };
+
 
 //this initializes a single user.  It makes use of above helpers.    
 var initUser = function(user) {
@@ -472,6 +492,8 @@ socket.on('users', function (users) {
     // declaring initialization variables for the current user
     var otherUsers = getOtherUsers(username, users);
     var currentUser = findUser(username, users);
+    if (currentUser.killedBy) deathScreen(currentUser);
+    else {
     coordList = currentUser.coordList;
     var loc = coordList[0];
     loc = toLatLng(loc[0], loc[1]);
@@ -492,8 +514,8 @@ socket.on('users', function (users) {
     //this goes off after the server has received another client's update
     socket.on('updateClient', function(user){
         // clear the old users setInterval and make a new user object
-        var clearUser = findUser(user.username, otherUsers);
-        clearInterval(clearUser.timerId);
+        var oldUser = findUser(user.username, otherUsers);
+        clearUser(olderUser);
         initUser(user);
     });
 
@@ -503,15 +525,14 @@ socket.on('users', function (users) {
     //If the current user is the one that is killed, send them to the death screen.
     socket.on('death', function(user){
         if (user.username == username) {
-            console.log("you're killed by "+ user.killedBy)//placeholder for send to deathScreen();
+            deathScreen(user);
         }
         else { 
-            var clearUser = findUser(user.username, otherUsers);
-            clearInterval(clearUser.timerId);
-        //send user to be reinitialized, which checks for killed condition
-            initUser(user);
+            var oldUser = findUser(user.username, otherUsers);
+            clearUser(oldUser);
         }
     });
+    }
 });
 
 
