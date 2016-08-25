@@ -146,6 +146,7 @@ var expandCoords = function(coordList, speed) {
 //
 
 var clearUser = function(user){
+    
     clearInterval(user.timerId);
     user.marker.setMap(null);
 };
@@ -513,10 +514,12 @@ socket.on('users', function (users) {
         //this goes off after the server has received another client's update
         socket.on('updateClient', function(user){
             // clear the old users setInterval and make a new user object
-            var oldUser = findUser(user.username, otherUsers);
-            if (oldUser) clearUser(oldUser);
-            else otherUsers.push(user);
-            initUser(user);
+            if (!user.killedBy) {
+                var oldUser = findUser(user.username, otherUsers);
+                if (oldUser) clearUser(oldUser);
+                else otherUsers.push(user);
+                initUser(user);
+            }
         });
 
         //If someone dies, broadcast it to everyone but the killer.
