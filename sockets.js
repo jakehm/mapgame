@@ -6,10 +6,16 @@ exports = module.exports = function(io){
         console.log('a user connectioned');
        
         //when the map page initializes, send over a list of user objects
-        socket.on('mapInit', function() {
+        socket.on('mapInit', function(data) {
             User.find({}, function(err, users) {
                 socket.emit('users', users);
-            });        
+            });
+            
+            var query = {username: data.username};
+            User.findOne(query, function(err, user) {
+                if (err) return handleError(err);
+                socket.broadcast.emit('updateClient', user);               
+            });
         });
 
         //when a user picks a new route, update the database and broadcast
@@ -44,6 +50,5 @@ exports = module.exports = function(io){
         socket.on('disconnect', function(){
             console.log('user disconnectioned');
         });
-
     });
 };
