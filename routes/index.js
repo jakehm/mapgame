@@ -63,7 +63,7 @@ router.get('/map', function(req, res) {
     
     // debug code
     if (!req.user) {
-        res.render('map', { username : 'jake' });
+        res.render('map', { username : 'master' });
     }
     else {
 	var renderMap = function() {	

@@ -1,44 +1,10 @@
-var inited = false;
-var xLoc;
-var xDest;
-var yDest;
-var yLoc;
-var updatedAt;
-var currentLocation;
-var coordList = [];
-var markers = [];
 var map;
 var searchBox;
 var directionsDisplay;
 var directionsService;
-var timerId;
-var timerId2;
-var goSignal;
-var marker;
-var movementOn = false;
-var test = "test";
-var timePassed;
-var totalDuration;
-
-
-//the following has to be done because I didn't set some below functions
-//to equal variables (I think), so they are trying to do things with
-//latlng objects when they are initialized, before the latlng objects
-//are defined.
-var loc = new google.maps.LatLng({
-    lat: parseFloat(40.712),
-    lng: parseFloat(-74.006)
-});
-var destination = new google.maps.LatLng({
-    lat: parseFloat(42.360),
-    lng: parseFloat(-71.059)
-});
-
 
 
 //HELPER FUNCTIONS
-//find user object in a list of users by username
-
 //return the users other than the current user in a list of objects
 var getOtherUsers = function(username, userList){
     var resultList = [];
@@ -127,26 +93,21 @@ var expandCoords = function(coordList, speed) {
     var newCoords = [];
     var i = 0;
 
-    while (i < (coordList.length - 2)) {
+    while (i < (coordList.length - 1)) {
         var interpCoords = interp(coordList[i], coordList[i + 1], speed);
         for (var coord in interpCoords) {
             newCoords.push(interpCoords[coord]);
         }
         i++;
     }
+
     return newCoords;
 }
 
-
-
-
-//
-//these functions are to deal with other users
-//
-//
-
+// stops user movement and deletes the marker
+// used after client updates the user from the server
 var clearUser = function(user){
-    
+
     clearInterval(user.timerId);
     user.marker.setMap(null);
 };
@@ -175,37 +136,59 @@ var calcDistance = function (coordA, coordB) {
     return Math.sqrt(dx2 + dy2).toFixed(2);
 };
 
-//creates an info window that shows various information about a user
-//including a kill button
-var createInfoWindow = function(user) {
-    var markerLoc1 = marker.getPosition();
+//Game Logic
+
+//currentUser needs to be passed as well, since it needs to know distance
+//between the user and the currentUser
+var genKillButton = function(user, currentUser){
+    var div = document.getElementById(user.username);
+    var killButton = document.createElement("button");
+    var killText = document.createTextNode("Kill");
+    killButton.appendChild(killText);
+    div.appendChild(killButton);
+    killButton.setAttribute("id", "killButton");
+    killButton.addEventListener("click", function(){ 
+        socket.emit('kill', {
+            killed: user.username,
+            killedBy: currentUser.username
+        }); 
+        clearUser(user);
+    });
+    //this is a placeholder for what will be user.stats.killRange
+    var range = 1;
+
+    //this section is repeated in the generateInfoWindow function,
+    //so it shoudl be factored out
+    var markerLoc1 = currentUser.marker.getPosition();
     var markerLoc2 = user.marker.getPosition();
     var coordA = [markerLoc1.lat(), markerLoc1.lng()];
     var coordB = [markerLoc2.lat(), markerLoc2.lng()];
     var dist = calcDistance(coordA, coordB);
-    var contentString = user.username+'<br>distance: '
-        +dist;
-    //if (dist<1) {
-    contentString+='<br><button id="killButton">Kill</button>';
+    //-----------------
+    if (dist>range) killButton.disabled=true;
+};
 
-    //when kill button is clicked, socket emit to alter database
-    $(document).on("click", "#killButton", function(e) {
-        socket.emit('kill', {
-            killed: user.username,
-            killedBy: username
-        }); 
-        clearUser(user);
-    });
-    //}
+
+
+//creates an info window that shows various information about a user
+//including a kill button
+var createInfoWindow = function(user, currentUser) {
+    var markerLoc1 = currentUser.marker.getPosition();
+    var markerLoc2 = user.marker.getPosition();
+    var coordA = [markerLoc1.lat(), markerLoc1.lng()];
+    var coordB = [markerLoc2.lat(), markerLoc2.lng()];
+    var dist = calcDistance(coordA, coordB);
+    var contentString = user.username+'<br>distance: '+dist
+        +'<br><div id="'+user.username+'"></div>';
+
     var infoWindow = new google.maps.InfoWindow({
         content: contentString
     });
-
     return infoWindow;
 };
 
 //generate other users markers
-var generateMarker = function(user) {
+var genMarker = function(user, currentUser) {
     var markerOptions = {
         position: {
             lat: user.coordList[0][0],
@@ -217,13 +200,31 @@ var generateMarker = function(user) {
 
     //shows information about a player when you click on their marker
     user.marker.addListener('click', function() {
-        infoWindow = createInfoWindow(user);
+        infoWindow = createInfoWindow(user, currentUser);
         infoWindow.open(map, user.marker);
+        genKillButton(user, currentUser);    
     });
 
     return user;
 };
 
+//create currentUser's marker, including the info window
+var genPlayerMarker = function(user) {
+
+    //image of the player's marker
+    //placeholder until use picks his own image
+    user.image = 'https://aerpro.com/sites/default/files/styles/minipic/public/images/photo/2004-2007_volvo_xc70_le_station_wagon_2011-03-23.jpg.jpg?itok=V0Dr6xqb';
+    var markerOptions = {
+        position: {
+            lat: user.coordList[0][0],
+            lng: user.coordList[0][1]
+        },
+        map: map,
+        icon: image
+    };
+
+    user.marker = new google.maps.Marker(markerOptions);
+};
 
 //moves the marker along the coordList
 //In the future maybe but all the movements in the same setInterval
@@ -250,44 +251,49 @@ var travel = function(user) {
 
 
 //this initializes a single user.  It makes use of above helpers.    
-var initUser = function(user) {
+var initUser = function(user, currentUser) {
     if(user.killedBy) {
         return;
     } else {
         extrapolate(user);
-        generateMarker(user);
+        genMarker(user, currentUser);
         travel(user);
     }
 };
 
 //this takes a list of other user objects and maps them all
-var initOtherUsers = function (userList) {
+var initOtherUsers = function (userList, otherUser) {
     userList.forEach(function (user) {
-        initUser(user);
+        initUser(user, otherUser);
     });
 };
 
 
+//this updates the server when a new route is chosen
+var updateServer = function(user) {
+    socket.emit('updateServer', {
+        username: user.username,
+        totalDuration: user.duration,
+        coordList: user.coordList
+    });
+    user.updatedAt = new Date();
+};
 
-//this function serves several purposes.
-//It calcultes the route and puts it into a list of coords [[x,y],[x,y]...]
-//It displays the line.
-//It sends the new route data to the server.
-//Some functionality is there only for the initial route and some is
-//only for a new route.
-var calculateAndDisplayRoute = function(loc, destination) {
-    coordList = [];
+//getRoute() only needs to be run on the currentUser.
+//It replaces some of the old calcAndDisplayRoute().
+//user.desitination must exit
+var getRoute = function(user, cb) {
     var routeOptions = {
-        origin:loc,
-        destination:destination,
+        origin: user.marker.getPosition(),
+        destination: user.destination,
         travelMode: google.maps.TravelMode.DRIVING
     };
-
     directionsService.route(routeOptions, function(response, status) {
         if (status === google.maps.DirectionsStatus.OK) {
             directionsDisplay.setDirections(response);
 
-            //getting coords from inner lists      
+            //getting coords from inner lists
+            var coords = [];
             var legs = response.routes[0].legs;
             var totalDuration = 0;
             for (var i = 0; i < legs.length; i++) {
@@ -296,64 +302,24 @@ var calculateAndDisplayRoute = function(loc, destination) {
                 for (var j = 0; j < steps.length; j++) {
                     var path = steps[j].path;
                     for (k = 0; k < path.length; k++) {
-                        coordList.push([path[k].lat(), path[k].lng()]);
+                        coords.push([path[k].lat(), path[k].lng()]);
                     }
                 }	
             }
-            //predicts location while you were gone
-            if(timePassed) {
-                var fractionTraveled = timePassed / totalDuration;
-                if (fractionTraveled < 1){
-                    var startIndex = fractionTraveled*coordList.length;
-                    startIndex = Math.round(startIndex);
-                    coordList = coordList.slice(startIndex);
-                }
-                else if (fractionTraveled >=1) {
-                    coordList = coordList.slice(-1);
-                }
-                timePassed = null;
-            }
-            else {
-                socket.emit('updateServer', {
-                    username: username,
-                    totalDuration: totalDuration,
-                    coordList: coordList
-                });
-            }
-            coordList.push([destination.lat(), destination.lng()]); 
-            inited = true;
+            user.duration = totalDuration;
+            user.coordList = coords;
+            var route = {coords: coords, duration: totalDuration};
+            cb(user);
         } else {
             window.alert('Directions request failed due to ' + status);
         }
     });
-}
+};
 
-var moveMarker = function() {
-    movementOn = true;
-    goSignal = true;
-    coordList = expandCoords(coordList, 0.0001);
-    var i = 0;
-    timerId = setInterval(function() {
-        if (i > (coordList.length - 1)) {
-            clearInterval(timerId);
-        } else if (goSignal === false) {
-            clearInterval(timerId);
-        } else {
-            var x = coordList[i][0];
-            var y = coordList[i][1];
-
-            var loc = new google.maps.LatLng(x, y);
-            marker.setPosition(loc);
-            i++;
-        }
-    }, 500);
-    movementOn = false;
-}
-//END GOOGLE MAPS SERVICES FUNCTIONS
 
 
 //This functions waits for a user to enter a new location in the ui
-var listenForSearch = function() {
+var listenForSearch = function(user) {
 
     //listen for eventlistenersent fired
     var markers = [];
@@ -396,36 +362,20 @@ var listenForSearch = function() {
 
             map.fitBounds(bounds);
 
-            goSignal = false;
-            inited = false;
-
-            var getResult3 = function() {
-                if (movementOn === false) {
-                    calculateAndDisplayRoute(marker.getPosition(), places[0].geometry.location);
-                    destination = places[0].geometry.location;
-                }
-                else {
-                    setTimeout(getResult3, 100);
-                }
-            };
-            getResult3();
-
-
-            var getResult2 = function() {
-                if (inited === true && movementOn === false) {
-                    moveMarker();
-
-                } else {
-                    setTimeout(getResult2, 500);
-                }
-            };
-            getResult2();
+            user.destination = places[0].geometry.location;
+            clearInterval(user.timerId);
+            getRoute(user, function(user){
+                updateServer(user);
+                extrapolate(user);
+                travel(user);
+            });
         }); //end of places for each loop
     });
 }
 
 // starts all the google maps service functions
-var initialize = function(loc, destination, timePassed, otherUsers) {
+//var initialize = function(loc, destination, timePassed, otherUsers) {
+var initialize = function(user, otherUsers) {
 
     directionsService = new google.maps.DirectionsService();
 
@@ -446,41 +396,30 @@ var initialize = function(loc, destination, timePassed, otherUsers) {
         searchBox.setBounds(map.getBounds());
     });
 
-
-    calculateAndDisplayRoute(loc, destination, timePassed);
-    timePassed = null;
-
-
-    var getResult = function() {
-        if (inited) {
-
-            //image of the player's marker
-            var image = 'https://aerpro.com/sites/default/files/styles/minipic/public/images/photo/2004-2007_volvo_xc70_le_station_wagon_2011-03-23.jpg.jpg?itok=V0Dr6xqb';
-
-            var markerOptions = {
-                position: {
-                    lat: coordList[0][0],
-                    lng: coordList[0][1]
-                },
-                map: map,
-                icon: image
-            };
-
-            marker = new google.maps.Marker(markerOptions);
-
-
-            moveMarker();
-
-
-            listenForSearch();
-        } else {
-            setTimeout(getResult, 500);
-        }
+    //image of the player's marker
+    var image = 'https://aerpro.com/sites/default/files/styles/minipic/public/images/photo/2004-2007_volvo_xc70_le_station_wagon_2011-03-23.jpg.jpg?itok=V0Dr6xqb';
+    // the genMarker() function cannot be used because
+    // of the marker image.  This should have its own genUserMarker() fn.
+    var markerOptions = {
+        position: {
+            lat: user.coordList[0][0],
+            lng: user.coordList[0][1]
+        },
+        map: map,
+        icon: image
     };
-    getResult();
 
-    initOtherUsers(otherUsers);
-}
+    user.marker = new google.maps.Marker(markerOptions);
+
+    extrapolate(user);
+    travel(user);
+
+
+
+    listenForSearch(user);
+
+    initOtherUsers(otherUsers, user);
+};
 
 
 //initialize socket conection, first part that runs on the page
@@ -494,22 +433,17 @@ socket.on('users', function (users) {
     var currentUser = findUser(username, users);
     if (currentUser.killedBy) deathScreen(currentUser);
     else {
-        coordList = currentUser.coordList;
-        var loc = coordList[0];
-        loc = toLatLng(loc[0], loc[1]);
-        var destination = coordList[coordList.length-1];
-        destination = toLatLng(destination[0], destination[1]);
-        timePassed = getTimePassed(currentUser.updatedAt);
-        //initialize the map and all the junk above the new code
-        //bringing map to outer global scope:
+        var loc = currentUser.coordList[0];
+        loc = toLatLng(loc[0], loc[1]); 
         var mapOptions = {
             zoom: 13,
-            center: loc
+            center: loc,
+            mapTypeControl: false
         };
         map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
 
-        google.maps.event.addDomListener(window, "load", initialize(loc, destination, timePassed, otherUsers));
-
+        //this is where everything  starts
+        google.maps.event.addDomListener(window, "load", initialize(currentUser, otherUsers));
 
         //this goes off after the server has received another client's update
         socket.on('updateClient', function(user){
