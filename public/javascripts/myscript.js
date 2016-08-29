@@ -4,6 +4,39 @@ var directionsDisplay;
 var directionsService;
 
 
+//from google maps api documentation
+var inventoryButton = function(controlDiv, map) {
+
+    //set css for border
+    var controlUI = document.createElement('div');
+    controlUI.style.backgroundColor = '#fff';
+    controlUI.style.border = '2px solid #fff';
+    controlUI.style.borderRadius = '3px';
+    controlUI.style.boxShadow = '0 2px 6px rgba(0,0,0,.3)';
+    controlUI.style.cursor = 'pointer';
+    controlUI.style.marginBottom = '22px';
+    controlUI.style.textAlign = 'center';
+    controlUI.title = 'Click to recenter the map';
+    controlDiv.appendChild(controlUI);
+
+    //set css for interior
+    var controlText = document.createElement('div');
+    controlText.style.color = 'rgb(25,25,25)';
+    controlText.style.fontFamily = 'Roboto,Arial,sans-serif';
+    controlText.style.fontSize = '16px';
+    controlText.style.lineHeight = '38px';
+    controlText.style.paddingLeft = '5px';
+    controlText.style.paddingRight = '5px';
+    controlText.innerHTML = 'Inventory';
+    controlUI.appendChild(controlText);
+
+    //setup click even listener
+    controlUI.addEventListener('click', function() {
+        map.setCenter(chicago);
+    });
+
+}
+
 //HELPER FUNCTIONS
 //return the users other than the current user in a list of objects
 var getOtherUsers = function(username, userList){
@@ -172,7 +205,7 @@ var genKillButton = function(user, currentUser){
 
 //creates an info window that shows various information about a user
 //including a kill button
-var createInfoWindow = function(user, currentUser) {
+var genInfoWindow = function(user, currentUser) {
     var markerLoc1 = currentUser.marker.getPosition();
     var markerLoc2 = user.marker.getPosition();
     var coordA = [markerLoc1.lat(), markerLoc1.lng()];
@@ -200,7 +233,7 @@ var genMarker = function(user, currentUser) {
 
     //shows information about a player when you click on their marker
     user.marker.addListener('click', function() {
-        infoWindow = createInfoWindow(user, currentUser);
+        var infoWindow = genInfoWindow(user, currentUser);
         infoWindow.open(map, user.marker);
         genKillButton(user, currentUser);    
     });
@@ -208,23 +241,28 @@ var genMarker = function(user, currentUser) {
     return user;
 };
 
-//create currentUser's marker, including the info window
 var genPlayerMarker = function(user) {
 
     //image of the player's marker
     //placeholder until use picks his own image
     user.image = 'https://aerpro.com/sites/default/files/styles/minipic/public/images/photo/2004-2007_volvo_xc70_le_station_wagon_2011-03-23.jpg.jpg?itok=V0Dr6xqb';
+    
     var markerOptions = {
         position: {
             lat: user.coordList[0][0],
             lng: user.coordList[0][1]
         },
         map: map,
-        icon: image
+        icon: user.image
     };
 
     user.marker = new google.maps.Marker(markerOptions);
 };
+
+//use jquery mobile to make an inventory panel
+/*var populateInventory = function(user){
+    return;
+};*/
 
 //moves the marker along the coordList
 //In the future maybe but all the movements in the same setInterval
@@ -308,14 +346,12 @@ var getRoute = function(user, cb) {
             }
             user.duration = totalDuration;
             user.coordList = coords;
-            var route = {coords: coords, duration: totalDuration};
             cb(user);
         } else {
             window.alert('Directions request failed due to ' + status);
         }
     });
 };
-
 
 
 //This functions waits for a user to enter a new location in the ui
@@ -366,7 +402,6 @@ var listenForSearch = function(user) {
             clearInterval(user.timerId);
             getRoute(user, function(user){
                 updateServer(user);
-                extrapolate(user);
                 travel(user);
             });
         }); //end of places for each loop
@@ -374,7 +409,6 @@ var listenForSearch = function(user) {
 }
 
 // starts all the google maps service functions
-//var initialize = function(loc, destination, timePassed, otherUsers) {
 var initialize = function(user, otherUsers) {
 
     directionsService = new google.maps.DirectionsService();
@@ -396,6 +430,27 @@ var initialize = function(user, otherUsers) {
         searchBox.setBounds(map.getBounds());
     });
 
+    //initialize inventory button
+    var inventoryButton = document.getElementById('inventory');
+    var inventoryContents = document.getElementById('inventoryContents');
+    var span = document.getElementsByClassName("close")[0];
+
+    inventoryButton.onclick = function() {
+        inventoryContents.style.display = "block";
+    }
+
+    span.onclick = function() {
+        inventoryContents.style.display = "none";
+    }
+    
+    window.onclick = function(event) {
+        if(event.target==inventoryContents) inventoryContents.style.display = "none"; 
+    }
+            
+    inventoryButton.index = 1;    
+    map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(inventoryButton);
+
+    /*
     //image of the player's marker
     var image = 'https://aerpro.com/sites/default/files/styles/minipic/public/images/photo/2004-2007_volvo_xc70_le_station_wagon_2011-03-23.jpg.jpg?itok=V0Dr6xqb';
     // the genMarker() function cannot be used because
@@ -410,10 +465,14 @@ var initialize = function(user, otherUsers) {
     };
 
     user.marker = new google.maps.Marker(markerOptions);
-
+*/ 
     extrapolate(user);
-    travel(user);
-
+    genPlayerMarker(user);
+    var destination = user.coordList[user.coordList.length-1];
+    user.destination = toLatLng(destination[0], destination[1]);
+    getRoute(user, function(user) {
+        travel(user);
+    });
 
 
     listenForSearch(user);
@@ -441,7 +500,6 @@ socket.on('users', function (users) {
             mapTypeControl: false
         };
         map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
-
         //this is where everything  starts
         google.maps.event.addDomListener(window, "load", initialize(currentUser, otherUsers));
 
