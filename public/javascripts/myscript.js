@@ -259,10 +259,6 @@ var genPlayerMarker = function(user) {
     user.marker = new google.maps.Marker(markerOptions);
 };
 
-//use jquery mobile to make an inventory panel
-/*var populateInventory = function(user){
-    return;
-};*/
 
 //moves the marker along the coordList
 //In the future maybe but all the movements in the same setInterval
@@ -408,6 +404,43 @@ var listenForSearch = function(user) {
     });
 }
 
+var populateInventory = function(user){
+    var inventory = document.getElementById('playerInventory');
+    var contentString;
+    if (!user.inventory){
+        contentString ='You have nothing in your inventory.';
+    }
+    else {
+        for (var item in user.inventory){
+            contentString+='<p>'+item+':'+user.inventory[item]+'</p>';
+        }
+    }
+    inventory.innerHTML = contentString;
+};
+
+var genInventoryButton = function(map) {
+
+    var inventoryButton = document.getElementById('inventoryButton');
+    var inventoryModal = document.getElementById('inventoryModal');
+    var span = document.getElementsByClassName("close")[0];
+
+    inventoryButton.onclick = function() {
+        inventoryModal.style.display = "block";
+    }
+
+    span.onclick = function() {
+        inventoryModal.style.display = "none";
+    }
+    
+    window.onclick = function(event) {
+        if(event.target==inventoryModal) inventoryModal.style.display = "none"; 
+    }
+            
+    inventoryButton.index = 1;    
+    map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(inventoryButton);
+};
+
+
 // starts all the google maps service functions
 var initialize = function(user, otherUsers) {
 
@@ -430,42 +463,10 @@ var initialize = function(user, otherUsers) {
         searchBox.setBounds(map.getBounds());
     });
 
-    //initialize inventory button
-    var inventoryButton = document.getElementById('inventory');
-    var inventoryContents = document.getElementById('inventoryContents');
-    var span = document.getElementsByClassName("close")[0];
-
-    inventoryButton.onclick = function() {
-        inventoryContents.style.display = "block";
-    }
-
-    span.onclick = function() {
-        inventoryContents.style.display = "none";
-    }
-    
-    window.onclick = function(event) {
-        if(event.target==inventoryContents) inventoryContents.style.display = "none"; 
-    }
-            
-    inventoryButton.index = 1;    
-    map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(inventoryButton);
-
-    /*
-    //image of the player's marker
-    var image = 'https://aerpro.com/sites/default/files/styles/minipic/public/images/photo/2004-2007_volvo_xc70_le_station_wagon_2011-03-23.jpg.jpg?itok=V0Dr6xqb';
-    // the genMarker() function cannot be used because
-    // of the marker image.  This should have its own genUserMarker() fn.
-    var markerOptions = {
-        position: {
-            lat: user.coordList[0][0],
-            lng: user.coordList[0][1]
-        },
-        map: map,
-        icon: image
-    };
-
-    user.marker = new google.maps.Marker(markerOptions);
-*/ 
+   
+    genInventoryButton(map);
+    populateInventory(user);
+    //---------------------------------- 
     extrapolate(user);
     genPlayerMarker(user);
     var destination = user.coordList[user.coordList.length-1];
@@ -482,7 +483,7 @@ var initialize = function(user, otherUsers) {
 
 
 //initialize socket conection, first part that runs on the page
-var socket = io.connect();//'lightninging.us:3000',{secure:true});
+var socket = io.connect();
 socket.emit('mapInit', {username: username});
 
 socket.on('users', function (users) {
