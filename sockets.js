@@ -11,6 +11,8 @@ exports = module.exports = function(io){
                 socket.emit('users', users);
             });
             
+            // this might not be necessary now that new users
+            // update client side
             var query = {username: data.username};
             User.findOne(query, function(err, user) {
                 if (err) return handleError(err);

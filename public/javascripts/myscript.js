@@ -174,23 +174,23 @@ var calcDistance = function (coordA, coordB) {
 //currentUser needs to be passed as well, since it needs to know distance
 //between the user and the currentUser
 var genKillButton = function(user, currentUser){
-    
+
     var div = document.getElementById(user.username);
     var killButton = div.querySelector("#killButton");
     //check if button doesn't already exist
     if (!killButton) {
-    var killButton = document.createElement("button");
-    var killText = document.createTextNode("Kill");
-    killButton.appendChild(killText);
-    div.appendChild(killButton);
-    killButton.setAttribute("id", "killButton");
-    killButton.addEventListener("click", function(){ 
-        socket.emit('kill', {
-            killed: user.username,
-            killedBy: currentUser.username
-        }); 
-        clearUser(user);
-    });
+        var killButton = document.createElement("button");
+        var killText = document.createTextNode("Kill");
+        killButton.appendChild(killText);
+        div.appendChild(killButton);
+        killButton.setAttribute("id", "killButton");
+        killButton.addEventListener("click", function(){ 
+            socket.emit('kill', {
+                killed: user.username,
+                killedBy: currentUser.username
+            }); 
+            clearUser(user);
+        });
     } 
     //this is a placeholder for what will be user.stats.killRange
     var range = 1;
@@ -251,7 +251,7 @@ var genPlayerMarker = function(user) {
     //image of the player's marker
     //placeholder until use picks his own image
     user.image = 'https://aerpro.com/sites/default/files/styles/minipic/public/images/photo/2004-2007_volvo_xc70_le_station_wagon_2011-03-23.jpg.jpg?itok=V0Dr6xqb';
-    
+
     var markerOptions = {
         position: {
             lat: user.coordList[0][0],
@@ -358,6 +358,44 @@ var getRoute = function(user, cb) {
     });
 };
 
+//used on player the first time they log in
+//returns coord in form of [x,y]
+var getRandomLocation = function(){
+    //define the bounds for the random spawn
+    var polyCoords = [
+        {lat: 44.79803805, lng: -68.80651474},
+        {lat: 44.82361249, lng: -68.77098083},
+        {lat: 44.79060716, lng: -68.73767853},
+        {lat: 44.77866701, lng: -68.75329971}
+    ];
+
+    //construct polygon
+    var randBounds = new google.maps.Polygon({
+        paths: polyCoords
+    });
+    
+    //randBounds.setMap(map);
+
+    //I don't know what this next part is doing but
+    //I saw it on stackoverflow
+    var bounds = new google.maps.LatLngBounds();
+    for (var i=0; i<randBounds.getPath().getLength(); i++) {
+        bounds.extend(randBounds.getPath().getAt(i));
+    }
+    var sw = bounds.getSouthWest();
+    var ne = bounds.getNorthEast();
+
+    while(true) {
+        var ptLat = Math.random()*(ne.lat()-sw.lat())+sw.lat();
+        var ptLng = Math.random()*(ne.lng()-sw.lng())+sw.lng();
+        var point = new google.maps.LatLng(ptLat, ptLng);
+        if (google.maps.geometry.poly.containsLocation(point, randBounds)) {
+            return [ptLat, ptLng];
+            break;
+        }
+    }
+}
+
 var listenForClick = function(user){
     google.maps.event.addListener(map, 'click', function(event){
         user.destination = event.latLng;
@@ -454,11 +492,11 @@ var genInventoryButton = function(map) {
     span.onclick = function() {
         inventoryModal.style.display = "none";
     }
-    
+
     window.onclick = function(event) {
         if(event.target==inventoryModal) inventoryModal.style.display = "none"; 
     }
-            
+
     inventoryButton.index = 1;    
     map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(inventoryButton);
 };
@@ -486,7 +524,7 @@ var initialize = function(user, otherUsers) {
         searchBox.setBounds(map.getBounds());
     });
 
-   
+
     genInventoryButton(map);
     populateInventory(user);
     //---------------------------------- 
@@ -515,6 +553,13 @@ socket.on('users', function (users) {
     var currentUser = findUser(username, users);
     if (currentUser.killedBy) deathScreen(currentUser);
     else {
+
+        //checking if player is new
+        if (currentUser.createdAt == currentUser.updatedAt) {
+            //spawning player in a ranadom location    
+            currentUser.coordList = [getRandomLocation()];
+            updateServer(currentUser);
+        }
         var loc = currentUser.coordList[0];
         loc = toLatLng(loc[0], loc[1]); 
         var mapOptions = {
