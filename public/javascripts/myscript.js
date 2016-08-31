@@ -174,7 +174,11 @@ var calcDistance = function (coordA, coordB) {
 //currentUser needs to be passed as well, since it needs to know distance
 //between the user and the currentUser
 var genKillButton = function(user, currentUser){
+    
     var div = document.getElementById(user.username);
+    var killButton = div.querySelector("#killButton");
+    //check if button doesn't already exist
+    if (!killButton) {
     var killButton = document.createElement("button");
     var killText = document.createTextNode("Kill");
     killButton.appendChild(killText);
@@ -187,6 +191,7 @@ var genKillButton = function(user, currentUser){
         }); 
         clearUser(user);
     });
+    } 
     //this is a placeholder for what will be user.stats.killRange
     var range = 1;
 
@@ -232,8 +237,8 @@ var genMarker = function(user, currentUser) {
     user.marker = new google.maps.Marker(markerOptions);
 
     //shows information about a player when you click on their marker
-    user.marker.addListener('click', function() {
-        var infoWindow = genInfoWindow(user, currentUser);
+    var infoWindow = genInfoWindow(user, currentUser);
+    user.marker.addListener('click', function() { 
         infoWindow.open(map, user.marker);
         genKillButton(user, currentUser);    
     });
@@ -264,7 +269,8 @@ var genPlayerMarker = function(user) {
 //In the future maybe but all the movements in the same setInterval
 //and then vary the amount of coords depending on duration of route
 var travel = function(user) {
-    user.coordList = expandCoords(user.coordList, 0.0001);
+    //added another 0 to this number to make it smoother for walking
+    user.coordList = expandCoords(user.coordList, 0.00001);
     user.interval = (user.duration-getTimePassed(user.updatedAt)) * 1000 / user.coordList.length;
 
     user.counter = 0;
@@ -272,12 +278,13 @@ var travel = function(user) {
         if (user.counter > (user.coordList.length - 1)) {
             clearInterval(user.timerId);
         } else {
-            user.marker.setPosition(
+            var newLoc = 
                 new google.maps.LatLng(
                     user.coordList[user.counter][0],
                     user.coordList[user.counter][1]
-                )
-            );
+                );
+            user.marker.setPosition(newLoc);
+            if (user.username == username) map.setCenter(newLoc);
             user.counter++;
         }
     }, user.interval);
@@ -315,15 +322,17 @@ var updateServer = function(user) {
 
 //getRoute() only needs to be run on the currentUser.
 //It replaces some of the old calcAndDisplayRoute().
-//user.desitination must exit
+//user.desitination must exist
+//NOTE: this is on the WALKING setting
 var getRoute = function(user, cb) {
     var routeOptions = {
         origin: user.marker.getPosition(),
         destination: user.destination,
-        travelMode: google.maps.TravelMode.DRIVING
+        travelMode: google.maps.TravelMode.WALKING
     };
     directionsService.route(routeOptions, function(response, status) {
         if (status === google.maps.DirectionsStatus.OK) {
+            directionsDisplay.setOptions({ preserveViewport: true, suppressMarkers: true });
             directionsDisplay.setDirections(response);
 
             //getting coords from inner lists
@@ -349,6 +358,16 @@ var getRoute = function(user, cb) {
     });
 };
 
+var listenForClick = function(user){
+    google.maps.event.addListener(map, 'click', function(event){
+        user.destination = event.latLng;
+        clearInterval(user.timerId);
+        getRoute(user, function(user){
+            updateServer(user);
+            travel(user);
+        });
+    });
+};
 
 //This functions waits for a user to enter a new location in the ui
 var listenForSearch = function(user) {
@@ -401,18 +420,22 @@ var listenForSearch = function(user) {
                 travel(user);
             });
         }); //end of places for each loop
-    });
+    }); //end of places_changed
+
+
 }
 
 var populateInventory = function(user){
     var inventory = document.getElementById('playerInventory');
-    var contentString;
+    var contentString = '';
     if (!user.inventory){
         contentString ='You have nothing in your inventory.';
     }
     else {
         for (var item in user.inventory){
-            contentString+='<p>'+item+':'+user.inventory[item]+'</p>';
+            contentString+='<p>'+item+': '+user.inventory[item];
+            if (item=='money') contentString+=' usd';
+            contentString+='</p>';
         }
     }
     inventory.innerHTML = contentString;
@@ -475,9 +498,8 @@ var initialize = function(user, otherUsers) {
         travel(user);
     });
 
-
     listenForSearch(user);
-
+    listenForClick(user);
     initOtherUsers(otherUsers, user);
 };
 
@@ -496,9 +518,14 @@ socket.on('users', function (users) {
         var loc = currentUser.coordList[0];
         loc = toLatLng(loc[0], loc[1]); 
         var mapOptions = {
-            zoom: 13,
+            zoom: currentUser.stats.range,
             center: loc,
-            mapTypeControl: false
+            mapTypeControl: false,
+            //the following options make the map fixed
+            draggable: false,
+            zoomControl: false,
+            scrollwheel: false,
+            disableDoubleClickZoom: true
         };
         map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
         //this is where everything  starts
@@ -511,7 +538,7 @@ socket.on('users', function (users) {
                 var oldUser = findUser(user.username, otherUsers);
                 if (oldUser) clearUser(oldUser);
                 else otherUsers.push(user);
-                initUser(user);
+                initUser(user, currentUser);
             }
         });
 
