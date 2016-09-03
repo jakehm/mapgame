@@ -3,7 +3,6 @@ var searchBox;
 var directionsDisplay;
 var directionsService;
 
-
 //from google maps api documentation
 var inventoryButton = function(controlDiv, map) {
 
@@ -394,7 +393,26 @@ var getRandomLocation = function(){
             break;
         }
     }
-}
+};
+
+var listenForPoi = function() {
+    
+    var service = new google.maps.places.PlacesService(map);
+    
+    google.maps.event.addListener(map, 'click', function(event) {
+        var request = {
+            location: event.latLng,
+            radius: 100
+        };
+        service.nearbySearch(request, function(results, status) {
+            if (status == google.maps.places.PlacesServiceStatus.OK) {
+                console.log(results);
+            } else {
+                console.log('No results found');
+            }
+        });
+    });
+};
 
 var listenForClick = function(user){
     google.maps.event.addListener(map, 'click', function(event){
@@ -538,6 +556,8 @@ var initialize = function(user, otherUsers) {
 
     listenForSearch(user);
     listenForClick(user);
+    listenForPoi();
+
     initOtherUsers(otherUsers, user);
 };
 
@@ -570,9 +590,11 @@ socket.on('users', function (users) {
             draggable: false,
             zoomControl: false,
             scrollwheel: false,
-            disableDoubleClickZoom: true
+            disableDoubleClickZoom: true,
+            clickableIcons: false
         };
         map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
+
         //this is where everything  starts
         google.maps.event.addDomListener(window, "load", initialize(currentUser, otherUsers));
 
