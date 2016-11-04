@@ -402,16 +402,28 @@ var listenForPoi = function() {
     google.maps.event.addListener(map, 'click', function(event) {
         var request = {
             location: event.latLng,
-            radius: 100
+            radius: 10
         };
         service.nearbySearch(request, function(results, status) {
             if (status == google.maps.places.PlacesServiceStatus.OK) {
-                console.log(results);
+                for (let result of results) {
+                    console.log(result.name);
+                    if (result.types.includes('restaurant') ||
+                        result.types.includes('food') ||
+                        result.types.includes('lodging')) {
+                        var contentString = result.name + 'rest here';
+                        var infoWindow = new google.maps.InfoWindow({
+                            content: contentString,
+                            position: event.latLng
+                        });
+                        infoWindow.open(map);
+                    }
+                }
             } else {
                 console.log('No results found');
             }
-        });
-    });
+        });//nearbysearch
+    });//click event
 };
 
 var listenForClick = function(user){

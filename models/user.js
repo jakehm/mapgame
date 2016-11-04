@@ -7,7 +7,7 @@ var userSchema = new Schema({
 	duration: {type: Number, default: 0},
     inventory: {type: Schema.Types.Mixed, default: {}},
     stats: {
-        range: {type: Number, default: 16}    
+        range: {type: Number, default: 17}    
     },
     killedBy: {type: String, default:null},
     createdAt: Date,
